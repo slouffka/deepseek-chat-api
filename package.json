@@ -1,0 +1,17 @@
+{
+  "name": "deepseek-chat-api-demo",
+  "version": "1.0.0",
+  "main": "cors-proxy.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1"
+  }
+}
