@@ -13,8 +13,9 @@
             --primary: #007AFF;
             --surface: #FFFFFF;
             --background: #F2F2F7;
+            --background-thinking: #F7F7F7;
             --border: #E5E5EA;
-            --text-primary: #1D1D1F;
+            --text-primary: #38383a;
             --text-secondary: #8E8E93;
             --text-tertiary: #C7C7CC;
             --success: #34C759;
@@ -32,9 +33,10 @@
         [data-theme="dark"] {
             --primary: #0A84FF;
             --surface: #1C1C1E;
-            --background: #000000;
+            --background: #1D1D1F;
+            --background-thinking: #222222;
             --border: #38383A;
-            --text-primary: #FFFFFF;
+            --text-primary: #c9d1d9;
             --text-secondary: #8E8E93;
             --text-tertiary: #48484A;
             --success: #30D158;
@@ -60,7 +62,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            max-width: 640px;
+            max-width: 48rem;
             margin: 0 auto;
             transition: background-color 0.3s, color 0.3s;
         }
@@ -76,7 +78,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing);
+            padding: 0 1rem;
         }
 
         .header-left {
@@ -133,12 +135,7 @@
         }
 
         .config-card.collapsed {
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            border: 1px solid transparent;
-            opacity: 0;
-            margin-bottom: 0;
+            display: none;
         }
 
         .card-title {
@@ -231,7 +228,7 @@
 
         .btn-primary {
             background: var(--primary);
-            color: white;
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .btn-primary:hover {
@@ -248,10 +245,11 @@
             color: white;
             padding: 10px;
             width: 44px; /* Square-ish */
+            background-color: #ef4444;
         }
         
         .btn-stop:hover {
-            background: #D32F2F;
+            background-color: #dc2626;
         }
 
         .btn-secondary {
@@ -266,7 +264,7 @@
 
         .btn-warning {
             background: var(--warning);
-            color: white;
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .btn-warning:hover {
@@ -295,8 +293,8 @@
             padding: 0; /* Remove default padding for full-width look */
             background: var(--surface);
             overflow: hidden; /* Contain children */
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 2px;
+            border-bottom-right-radius: 2px;
         }
 
         .chat-header {
@@ -332,6 +330,9 @@
 
         .message-content {
             white-space: normal;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .chat-message.user {
@@ -339,6 +340,7 @@
             background-color: var(--primary);
             color: white;
             border-bottom-right-radius: 2px;
+            padding: 0.5rem;
         }
 
         /* Dark mode user message specific overrides */
@@ -363,7 +365,7 @@
             line-height: 1.6;
             font-size: 14px;
         }
-        .markdown-body p { margin-bottom: 12px; }
+        .markdown-body p { margin-bottom: 0.5rem; }
         .markdown-body p:last-child { margin-bottom: 0; }
         .markdown-body pre {
             background: var(--code-bg);
@@ -373,7 +375,7 @@
             border: 1px solid var(--border);
 
             &:not(:last-child) {
-                margin: 0 0 0.5rem 0;
+                margin: 0 0 1rem 0;
             }
         }
         .markdown-body code {
@@ -394,19 +396,18 @@
             color: inherit;
         }
         .markdown-body ul, .markdown-body ol {
-            margin-left: 20px;
-            margin-bottom: 12px;
+            margin-left: 1rem;
+            margin-bottom: 0.5rem;
         }
         .markdown-body h1, .markdown-body h2, .markdown-body h3 {
-            margin-top: 16px;
-            margin-bottom: 8px;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
             font-weight: 600;
         }
         .markdown-body a { color: inherit; text-decoration: underline; }
 
         /* Thinking Block Styles */
         .thinking-block {
-            margin-bottom: 12px;
             border-left: 3px solid var(--border);
             padding-left: 14px;
             background: linear-gradient(to right, rgba(125,125,125,0.05), transparent);
@@ -446,7 +447,7 @@
             margin-top: 8px;
             white-space: pre-wrap;
             line-height: 1.5;
-            background: rgba(125, 125, 125, 0.05);
+            background-color: var(--background-thinking);
             padding: 8px;
             border-radius: 6px;
         }
@@ -454,7 +455,7 @@
         .message-role-label {
             font-size: 10px;
             color: var(--text-secondary);
-            margin-bottom: 4px;
+            /* margin-bottom: 4px; */
             margin-left: 4px;
             text-transform: uppercase;
         }
@@ -475,11 +476,11 @@
         }
         
         .chat-message.user .token-usage {
-             border-top: 1px solid rgba(255,255,255,0.2);
+            border-top: 1px solid rgba(255,255,255,0.2);
         }
 
         [data-theme="dark"] .chat-message.user .token-usage {
-             border-top: 1px solid rgba(125,125,125,0.2);
+            border-top: 1px solid rgba(125,125,125,0.2);
         }
 
         .empty-state {
@@ -495,8 +496,8 @@
 
         .input-card {
             border-radius: 0.5rem;
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
+            border-top-left-radius: 2px;
+            border-top-right-radius: 2px;
             margin-top: 0;
         }
 
@@ -654,8 +655,8 @@
             position: absolute;
             bottom: 0.5rem;
             right: 0.5rem;
-            background: var(--primary);
-            color: white;
+            background: #2563eb;
+            color: #c9d1d9;
             border-radius: 8px;
             width: 32px;
             height: 32px;
@@ -670,7 +671,7 @@
         }
 
         .send-icon-btn:hover {
-            background: #0056CC;
+            background: #1d4ed8;
             transform: scale(1.05);
         }
 
@@ -790,8 +791,7 @@
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>DeepSeek Chat API</h1>
-                <p class="subtitle">Proof-of-Work enabled interface</p>
+                <h1>Clean Chat</h1>
             </div>
             <div style="display: flex; gap: 8px;">
                 <button class="icon-btn" id="themeToggle" title="Toggle dark mode">
