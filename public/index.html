@@ -248,31 +248,103 @@
             to { transform: rotate(360deg); }
         }
 
-        .response-container {
+        /* CHAT UI STYLES */
+        .chat-card {
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 200px;
-        }
-
-        #response {
-            flex: 1;
+            min-height: 400px;
+            padding: 0; /* Remove default padding for full-width look */
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: var(--spacing);
-            font-family: var(--font-mono);
-            font-size: 13px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            overflow-y: auto;
-            min-height: 150px;
-            color: var(--text-primary);
+            overflow: hidden; /* Contain children */
         }
 
-        .response-placeholder {
-            color: var(--text-tertiary);
-            font-style: italic;
+        .chat-header {
+            padding: var(--spacing);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: #F9F9FB;
+        }
+
+        .chat-message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            background-color: var(--primary);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-message.assistant {
+            align-self: flex-start;
+            background-color: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 2px;
+            font-family: var(--font-mono); /* Keep code look for assistant */
+        }
+
+        .message-role-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            margin-left: 4px;
+            text-transform: uppercase;
+        }
+
+        .chat-message.user + .message-role-label {
+            text-align: right;
+            margin-right: 4px;
+            margin-left: 0;
+        }
+
+        /* Token usage in bubble */
+        .token-usage {
+            font-size: 10px;
+            margin-top: 8px;
+            opacity: 0.7;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            padding-top: 4px;
+        }
+        
+        .chat-message.user .token-usage {
+             border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 32px;
+        }
+
+        .input-area {
+            padding: var(--spacing);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
         }
 
         .status-bar {
@@ -457,9 +529,9 @@
                 <p class="subtitle">Proof-of-Work enabled interface</p>
             </div>
             <button class="config-toggle" id="configToggle" title="Toggle configuration">
-                <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" />
-                    <path d="M19.4 15C19.5 15.4 19.6 15.8 19.7 16.2L21.5 17.5C21.8 17.7 22 18.1 21.9 18.5L20.9 21.2C20.8 21.6 20.4 21.9 20 21.9L17.7 21.4C17.2 21.7 16.7 21.9 16.2 22.1L15.8 24.4C15.7 24.8 15.4 25.1 15 25.1H12C11.6 25.1 11.3 24.8 11.2 24.4L10.8 22.1C10.3 21.9 9.8 21.7 9.3 21.4L7 21.9C6.6 21.9 6.2 21.6 6.1 21.2L5.1 18.5C5 18.1 5.2 17.7 5.5 17.5L7.3 16.2C7.4 15.8 7.5 15.4 7.6 15L5.8 13.7C5.5 13.5 5.3 13.1 5.4 12.7L6.4 10C6.5 9.6 6.9 9.3 7.3 9.3L9.6 9.8C10.1 9.5 10.6 9.3 11.1 9.1L11.5 6.8C11.6 6.4 11.9 6.1 12.3 6.1H15.3C15.7 6.1 16 6.4 16.1 6.8L16.5 9.1C17 9.3 17.5 9.5 18 9.8L20.3 9.3C20.7 9.3 21.1 9.6 21.2 10L22.2 12.7C22.3 13.1 22.1 13.5 21.8 13.7L20 15Z" />
+                <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
             </button>
         </header>
@@ -486,11 +558,29 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-title">Request</div>
-            <div class="input-group">
-                <label for="message">Prompt (User Message)</label>
-                <textarea id="message" placeholder="Enter your message...">Explain quantum computing in simple terms</textarea>
+        <!-- NEW LAYOUT: Chat History on TOP -->
+        <div class="card chat-card">
+            <div class="chat-header">
+                <div class="card-title" style="margin-bottom:0">Chat History</div>
+                <button class="btn-secondary" id="clearBtn" style="padding: 6px 12px; font-size: 13px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Clear History
+                </button>
+            </div>
+            <div class="chat-history" id="chatHistory">
+                <!-- Messages will be injected here -->
+                <div class="empty-state">
+                    <p>Start a new conversation</p>
+                    <p class="info-text">Messages are saved automatically.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-top: none;">
+             <div class="input-group">
+                <textarea id="message" placeholder="Type your message here... (Ctrl+Enter to send)"></textarea>
             </div>
             
             <div class="pow-status" id="powStatus">
@@ -509,22 +599,11 @@
             </div>
             
             <div class="controls">
-                <button class="btn-secondary" id="clearBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    New Chat
-                </button>
+                <div></div> <!-- Spacer -->
                 <button class="btn-primary" id="sendBtn">
                     Send Request
                 </button>
             </div>
-        </div>
-
-        <div class="card response-container">
-            <div class="card-title">Response</div>
-            <div id="response" class="response-placeholder">Response will appear here...</div>
         </div>
     </div>
 
@@ -533,531 +612,199 @@
     <!-- Web Worker code will be created from Blob -->
 
     <script>
-        // ==============================
-        // WASM-BASED PoW SOLVER
-        // ==============================
-
-        class WASMPoWSolver {
+        class DeepSeekHash {
             constructor() {
-                this.wasmInstance = null;
+                this.instance = null;
                 this.memory = null;
                 this.exports = null;
                 this.isReady = false;
-                this.initialized = false;
             }
 
-            async loadWasm(wasmUrl) {
+            async init(wasmPath) {
                 try {
                     updatePowStatus('Loading WASM module...', 'info', 0);
                     
-                    const response = await fetch(wasmUrl);
+                    const response = await fetch(wasmPath);
                     const bytes = await response.arrayBuffer();
                     
-                    // Minimal import object
+                    // Simple import object - the WASM seems self-contained
                     const importObject = {
                         env: {
                             memory: new WebAssembly.Memory({ initial: 256 }),
-                        },
-                        // Add some stubs for common functions
-                        imports: {
-                            log: console.log,
-                            error: console.error
                         }
                     };
 
                     const { instance } = await WebAssembly.instantiate(bytes, importObject);
                     
-                    this.wasmInstance = instance;
+                    this.instance = instance;
                     this.exports = instance.exports;
                     this.memory = this.exports.memory;
                     this.isReady = true;
                     
                     console.log('WASM loaded successfully');
-                    console.log('Available exports:', Object.keys(this.exports));
-                    
-                    // Test the functions
-                    await this.testWasmFunctions();
+                    console.log('Exports:', Object.keys(this.exports));
                     
                     updatePowStatus('WASM module ready', 'success', 100);
-                    return true;
+                    return this;
                     
                 } catch (error) {
                     console.error('Failed to load WASM:', error);
                     updatePowStatus(`WASM load failed: ${error.message}`, 'error', 0);
+                    throw error;
+                }
+            }
+
+            // Write string to WASM memory and return pointer and length
+            _writeToMemory(text) {
+                if (!this.isReady) throw new Error('WASM not initialized');
+                
+                const encoder = new TextEncoder();
+                const encoded = encoder.encode(text);
+                const length = encoded.length;
+                
+                // Use __wbindgen_export_0 for allocation (like in Python)
+                const ptr = this.exports.__wbindgen_export_0(length, 1);
+                
+                // Get memory view and write the string
+                const memoryView = new Uint8Array(this.memory.buffer);
+                memoryView.set(encoded, ptr);
+                
+                return [ptr, length];
+            }
+
+            // Calculate hash using the same method as Python
+            calculateHash(algorithm, challenge, salt, difficulty, expireAt) {
+                if (!this.isReady) throw new Error('WASM not initialized');
+                
+                console.log('Calculating hash with params:');
+                console.log('Algorithm:', algorithm);
+                console.log('Challenge:', challenge);
+                console.log('Salt:', salt);
+                console.log('Difficulty:', difficulty);
+                console.log('ExpireAt:', expireAt);
+                
+                // Build prefix string exactly as in Python: f"{salt}_{expire_at}_"
+                const prefix = `${salt}_${expireAt}_`;
+                
+                // Allocate space for return value (16 bytes)
+                const retptr = this.exports.__wbindgen_add_to_stack_pointer(-16);
+                
+                try {
+                    // Write challenge and prefix to memory
+                    const [challengePtr, challengeLen] = this._writeToMemory(challenge);
+                    const [prefixPtr, prefixLen] = this._writeToMemory(prefix);
+                    
+                    console.log('Calling wasm_solve with:');
+                    console.log('  retptr:', retptr);
+                    console.log('  challengePtr:', challengePtr);
+                    console.log('  challengeLen:', challengeLen);
+                    console.log('  prefixPtr:', prefixPtr);
+                    console.log('  prefixLen:', prefixLen);
+                    console.log('  difficulty:', difficulty);
+                    
+                    // Call wasm_solve exactly as in Python
+                    this.exports.wasm_solve(
+                        retptr,
+                        challengePtr,
+                        challengeLen,
+                        prefixPtr,
+                        prefixLen,
+                        parseFloat(difficulty)
+                    );
+                    
+                    // Read result from memory
+                    const memoryView = new Uint8Array(this.memory.buffer);
+                    
+                    // Read status (4 bytes, little endian)
+                    const statusBytes = memoryView.slice(retptr, retptr + 4);
+                    const status = new Int32Array(statusBytes.buffer)[0];
+                    
+                    console.log('Status:', status);
+                    
+                    if (status === 0) {
+                        return null;
+                    }
+                    
+                    // Read answer (8 bytes, float64, little endian)
+                    const answerBytes = memoryView.slice(retptr + 8, retptr + 16);
+                    const answerValue = new Float64Array(answerBytes.buffer)[0];
+                    const answer = Math.floor(answerValue);
+                    
+                    console.log('Answer value:', answerValue);
+                    console.log('Answer (int):', answer);
+                    
+                    return answer;
+                    
+                } finally {
+                    // Clean up stack pointer
+                    this.exports.__wbindgen_add_to_stack_pointer(16);
+                }
+            }
+        }
+
+        class DeepSeekPOW {
+            constructor() {
+                this.hasher = new DeepSeekHash();
+            }
+
+            async initialize(wasmPath) {
+                try {
+                    await this.hasher.init(wasmPath);
+                    console.log('DeepSeekPOW initialized');
+                    return true;
+                } catch (error) {
+                    console.error('Failed to initialize DeepSeekPOW:', error);
                     return false;
                 }
             }
 
-            async testWasmFunctions() {
-                try {
-                    console.log('Testing WASM functions...');
-                    
-                    // Test wasm_deepseek_hash_v1 with simple input
-                    const testInput = new TextEncoder().encode('test');
-                    const testOffset = 1024;
-                    
-                    // Get fresh memory view
-                    const memoryView = new Uint8Array(this.memory.buffer);
-                    
-                    // Ensure memory is large enough
-                    if (testOffset + testInput.length > memoryView.length) {
-                        console.warn('Memory too small, attempting to grow...');
-                        this.memory.grow(1); // Grow by 1 page (64KB)
-                    }
-                    
-                    // Write test data
-                    const freshMemoryView = new Uint8Array(this.memory.buffer);
-                    freshMemoryView.set(testInput, testOffset);
-                    
-                    // Call hash function
-                    const hashPtr = this.exports.wasm_deepseek_hash_v1(testOffset, testInput.length);
-                    console.log('Hash function test - returned pointer:', hashPtr);
-                    
-                    if (hashPtr && hashPtr !== 0) {
-                        const hashBytes = new Uint8Array(this.memory.buffer, hashPtr, 32);
-                        const hashHex = Array.from(hashBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-                        console.log('Test hash result:', hashHex);
-                    }
-                    
-                    this.initialized = true;
-                    
-                } catch (error) {
-                    console.error('WASM function test failed:', error);
-                }
-            }
-
-            // Helper: hex string to bytes
-            hexToBytes(hex) {
-                const bytes = new Uint8Array(hex.length / 2);
-                for (let i = 0; i < hex.length; i += 2) {
-                    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-                }
-                return bytes;
-            }
-
-            // Helper: bytes to hex string
-            bytesToHex(bytes) {
-                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-            }
-
-            // Calculate target from difficulty
-            calculateTargetFromDifficulty(difficulty) {
-                const maxHash = (1n << 256n) - 1n;
-                const targetBigInt = maxHash / BigInt(difficulty);
-                let targetHex = targetBigInt.toString(16);
-                targetHex = targetHex.padStart(64, '0');
-                return targetHex;
-            }
-
-            // Simpler approach: Use the algorithm from Python code but in JS
-            // Let's implement the same logic as in the Python pow.py
-            async solve(challenge, salt, difficulty, signature) {
-                if (!this.isReady) {
+            // Solve challenge and return base64-encoded response
+            async solveChallenge(config) {
+                if (!this.hasher.isReady) {
                     throw new Error('WASM module not loaded');
                 }
 
-                console.log('Starting PoW solve...');
-                console.log('Challenge:', challenge);
-                console.log('Salt:', salt);
-                console.log('Difficulty:', difficulty);
+                console.log('Solving challenge with config:', config);
                 
-                const targetHex = this.calculateTargetFromDifficulty(difficulty);
-                const targetBigInt = BigInt('0x' + targetHex);
+                // Calculate answer using the same method as Python
+                const answer = this.hasher.calculateHash(
+                    config.algorithm,
+                    config.challenge,
+                    config.salt,
+                    config.difficulty,
+                    config.expire_at
+                );
                 
-                // Convert inputs to bytes
-                const challengeBytes = this.hexToBytes(challenge);
-                const saltBytes = this.hexToBytes(salt);
+                console.log('Calculated answer:', answer);
                 
-                // Combine challenge + salt as prefix
-                const prefixBytes = new Uint8Array(challengeBytes.length + saltBytes.length);
-                prefixBytes.set(challengeBytes);
-                prefixBytes.set(saltBytes, challengeBytes.length);
-                
-                let nonce = 0n;
-                const maxNonce = 1000000n; // Limit for browser safety
-                const startTime = Date.now();
-                let hashesComputed = 0;
-                
-                // We'll use a simpler approach: try calling wasm_solve with the correct parameters
-                // First, let's see if we can get wasm_solve to work by examining what it expects
-                
-                // Based on the Python code, wasm_solve likely expects:
-                // 1. Pointer to prefix bytes (challenge + salt)
-                // 2. Prefix length
-                // 3. Pointer to target bytes (hex string)
-                // 4. Target length
-                
-                try {
-                    // Convert prefix to base64 like the Python code does
-                    const prefixBase64 = btoa(String.fromCharCode(...prefixBytes));
-                    const targetHexStr = targetHex;
-                    
-                    console.log('Prefix (base64):', prefixBase64);
-                    console.log('Target (hex):', targetHexStr);
-                    
-                    // Encode strings
-                    const encoder = new TextEncoder();
-                    const prefixEncoded = encoder.encode(prefixBase64);
-                    const targetEncoded = encoder.encode(targetHexStr);
-                    
-                    // Allocate space in memory - use fixed offsets
-                    const memory = this.memory;
-                    const pageSize = 64 * 1024; // 64KB
-                    
-                    // Grow memory if needed
-                    const neededBytes = 4096 + prefixEncoded.length + targetEncoded.length;
-                    const currentPages = memory.buffer.byteLength / pageSize;
-                    const neededPages = Math.ceil(neededBytes / pageSize);
-                    
-                    if (neededPages > currentPages) {
-                        memory.grow(neededPages - currentPages);
-                    }
-                    
-                    // Use fresh memory view
-                    const memoryView = new Uint8Array(memory.buffer);
-                    
-                    // Write data to memory at fixed offsets
-                    const prefixOffset = 1024;
-                    const targetOffset = prefixOffset + prefixEncoded.length + 1024;
-                    
-                    memoryView.set(prefixEncoded, prefixOffset);
-                    memoryView.set(targetEncoded, targetOffset);
-                    
-                    // Try calling wasm_solve with different parameter combinations
-                    let noncePtr;
-                    
-                    // Try: wasm_solve(prefix_ptr, prefix_len, target_ptr, target_len)
-                    try {
-                        noncePtr = this.exports.wasm_solve(prefixOffset, prefixEncoded.length, targetOffset, targetEncoded.length);
-                        console.log('wasm_solve returned pointer:', noncePtr);
-                    } catch (error) {
-                        console.log('First signature failed, trying different one...');
-                        // Try: wasm_solve(prefix_ptr, target_ptr) - without lengths
-                        noncePtr = this.exports.wasm_solve(prefixOffset, targetOffset);
-                        console.log('wasm_solve (2 params) returned pointer:', noncePtr);
-                    }
-                    
-                    if (noncePtr && noncePtr !== 0) {
-                        // Read 8-byte nonce from the pointer
-                        const nonceBytes = new Uint8Array(memory.buffer, noncePtr, 8);
-                        const nonceView = new DataView(nonceBytes.buffer, nonceBytes.byteOffset, 8);
-                        const nonce = nonceView.getBigUint64(0, true); // Little endian
-                        
-                        console.log('Found nonce via wasm_solve:', Number(nonce));
-                        
-                        // Calculate signature
-                        const sigInput = signature + nonce.toString(16).padStart(16, '0');
-                        const sigInputBytes = encoder.encode(sigInput);
-                        const sigInputOffset = targetOffset + targetEncoded.length + 1024;
-                        
-                        memoryView.set(sigInputBytes, sigInputOffset);
-                        const finalSigPtr = this.exports.wasm_deepseek_hash_v1(sigInputOffset, sigInputBytes.length);
-                        const finalSigBytes = new Uint8Array(memory.buffer, finalSigPtr, 32);
-                        const finalSigHex = this.bytesToHex(finalSigBytes);
-                        
-                        return {
-                            answer: Number(nonce),
-                            signature: finalSigHex,
-                            time: Date.now() - startTime,
-                            iterations: 1,
-                            hashRate: 0
-                        };
-                    } else {
-                        console.log('wasm_solve returned null/zero, falling back to manual solve...');
-                    }
-                    
-                } catch (error) {
-                    console.log('wasm_solve approach failed, falling back:', error);
+                if (answer === null || answer === undefined) {
+                    throw new Error('Failed to solve PoW challenge');
                 }
                 
-                // Fallback: Manual solving using wasm_deepseek_hash_v1
-                console.log('Starting manual solving...');
+                // Build result object exactly as in Python
+                const result = {
+                    'algorithm': config.algorithm,
+                    'challenge': config.challenge,
+                    'salt': config.salt,
+                    'answer': answer,
+                    'signature': config.signature,
+                    'target_path': config.target_path
+                };
                 
-                return await this.solveManually(challenge, salt, difficulty, signature);
-            }
-
-            // Manual solving using wasm_deepseek_hash_v1
-            async solveManually(challenge, salt, difficulty, signature) {
-                const targetHex = this.calculateTargetFromDifficulty(difficulty);
-                const targetBigInt = BigInt('0x' + targetHex);
+                console.log('Result object:', result);
                 
-                // Convert inputs to bytes
-                const challengeBytes = this.hexToBytes(challenge);
-                const saltBytes = this.hexToBytes(salt);
+                // Encode to base64 as in Python
+                const jsonStr = JSON.stringify(result);
+                const encoded = btoa(jsonStr);
                 
-                // Combine challenge + salt
-                const prefixBytes = new Uint8Array(challengeBytes.length + saltBytes.length);
-                prefixBytes.set(challengeBytes);
-                prefixBytes.set(saltBytes, challengeBytes.length);
+                console.log('Base64 encoded result:', encoded);
                 
-                let nonce = 0n;
-                const maxNonce = 100000n; // Reduced for browser
-                const startTime = Date.now();
-                let hashesComputed = 0;
-                let lastReportTime = startTime;
-                
-                const memory = this.memory;
-                const encoder = new TextEncoder();
-                
-                while (nonce < maxNonce) {
-                    // IMPORTANT: Get fresh memory view every iteration to avoid detached buffer
-                    const memoryView = new Uint8Array(memory.buffer);
-                    
-                    // Convert nonce to 8-byte little-endian
-                    const nonceBytes = new Uint8Array(8);
-                    const nonceView = new DataView(nonceBytes.buffer);
-                    nonceView.setBigUint64(0, nonce, true);
-                    
-                    // Combine prefix + nonce
-                    const data = new Uint8Array(prefixBytes.length + nonceBytes.length);
-                    data.set(prefixBytes);
-                    data.set(nonceBytes, prefixBytes.length);
-                    
-                    // Write to memory at a fixed offset
-                    const dataOffset = 2048;
-                    
-                    // Ensure we have enough memory
-                    if (dataOffset + data.length > memoryView.length) {
-                        // Calculate needed pages
-                        const pageSize = 64 * 1024;
-                        const neededBytes = dataOffset + data.length;
-                        const currentPages = memory.buffer.byteLength / pageSize;
-                        const neededPages = Math.ceil(neededBytes / pageSize);
-                        
-                        if (neededPages > currentPages) {
-                            memory.grow(neededPages - currentPages);
-                            // After growing, get fresh view
-                            continue; // Retry this iteration with fresh memory
-                        }
-                    }
-                    
-                    // Write data to memory
-                    memoryView.set(data, dataOffset);
-                    
-                    // Call hash function
-                    const hashPtr = this.exports.wasm_deepseek_hash_v1(dataOffset, data.length);
-                    
-                    // Read hash using fresh view
-                    const freshMemoryView = new Uint8Array(memory.buffer);
-                    const hashBytes = freshMemoryView.slice(hashPtr, hashPtr + 32);
-                    const hashHex = this.bytesToHex(hashBytes);
-                    const hashBigInt = BigInt('0x' + hashHex);
-                    
-                    hashesComputed++;
-                    
-                    // Check if solution found
-                    if (hashBigInt < targetBigInt) {
-                        const elapsed = Date.now() - startTime;
-                        console.log(`Manual solution found! Nonce: ${nonce}`);
-                        
-                        // Calculate final signature
-                        const sigInput = signature + nonce.toString(16).padStart(16, '0');
-                        const sigInputBytes = encoder.encode(sigInput);
-                        const sigInputOffset = dataOffset + data.length + 1024;
-                        
-                        // Write signature input
-                        freshMemoryView.set(sigInputBytes, sigInputOffset);
-                        const finalSigPtr = this.exports.wasm_deepseek_hash_v1(sigInputOffset, sigInputBytes.length);
-                        const finalSigBytes = freshMemoryView.slice(finalSigPtr, finalSigPtr + 32);
-                        const finalSigHex = this.bytesToHex(finalSigBytes);
-                        
-                        return {
-                            answer: Number(nonce),
-                            signature: finalSigHex,
-                            time: elapsed,
-                            iterations: hashesComputed,
-                            hashRate: Math.round(hashesComputed / (elapsed / 1000))
-                        };
-                    }
-                    
-                    nonce++;
-                    
-                    // Report progress
-                    if (Date.now() - lastReportTime > 1000) {
-                        lastReportTime = Date.now();
-                        const elapsed = lastReportTime - startTime;
-                        const hashRate = elapsed > 0 ? Math.round(hashesComputed / (elapsed / 1000)) : 0;
-                        const progress = Math.min(100, (Number(nonce) / Number(maxNonce)) * 100);
-                        
-                        updatePowStatus(
-                            `Mining... ${hashesComputed} hashes, ${hashRate} H/s`,
-                            'mining',
-                            progress
-                        );
-                    }
-                    
-                    // Timeout after 15 seconds
-                    if (Date.now() - startTime > 15000) {
-                        throw new Error('PoW solving timeout after 15 seconds');
-                    }
-                }
-                
-                throw new Error(`No solution found within ${maxNonce} iterations`);
-            }
-        }
-
-        // ==============================
-        // PURE JAVASCRIPT FALLBACK
-        // ==============================
-
-        class JavaScriptPoWSolver {
-            constructor() {
-                // Simple SHA3-256 implementation for fallback
-                this.initializeSHA3();
-            }
-
-            initializeSHA3() {
-                // Import SHA3 from CDN if not available
-                if (typeof sha3_256 === 'undefined') {
-                    console.log('Loading SHA3 library...');
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/js-sha3/0.9.3/sha3.min.js';
-                    script.onload = () => console.log('SHA3 loaded');
-                    document.head.appendChild(script);
-                }
-            }
-
-            hexToBytes(hex) {
-                const bytes = new Uint8Array(hex.length / 2);
-                for (let i = 0; i < hex.length; i += 2) {
-                    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-                }
-                return bytes;
-            }
-
-            bytesToHex(bytes) {
-                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-            }
-
-            calculateTargetFromDifficulty(difficulty) {
-                const maxHash = (1n << 256n) - 1n;
-                const targetBigInt = maxHash / BigInt(difficulty);
-                let targetHex = targetBigInt.toString(16);
-                targetHex = targetHex.padStart(64, '0');
-                return targetHex;
-            }
-
-            async solve(challenge, salt, difficulty, signature) {
-                console.log('Using JavaScript fallback solver...');
-                
-                const targetHex = this.calculateTargetFromDifficulty(difficulty);
-                const targetBigInt = BigInt('0x' + targetHex);
-                
-                const challengeBytes = this.hexToBytes(challenge);
-                const saltBytes = this.hexToBytes(salt);
-                
-                const prefixBytes = new Uint8Array(challengeBytes.length + saltBytes.length);
-                prefixBytes.set(challengeBytes);
-                prefixBytes.set(saltBytes, challengeBytes.length);
-                
-                let nonce = 0n;
-                const maxNonce = 50000n; // Very small for JS fallback
-                const startTime = Date.now();
-                let hashesComputed = 0;
-                
-                while (nonce < maxNonce) {
-                    const nonceBytes = new Uint8Array(8);
-                    const nonceView = new DataView(nonceBytes.buffer);
-                    nonceView.setBigUint64(0, nonce, true);
-                    
-                    const data = new Uint8Array(prefixBytes.length + nonceBytes.length);
-                    data.set(prefixBytes);
-                    data.set(nonceBytes, prefixBytes.length);
-                    
-                    // Convert to string for SHA3 library
-                    const dataStr = String.fromCharCode(...data);
-                    const hashHex = sha3_256(dataStr);
-                    const hashBigInt = BigInt('0x' + hashHex);
-                    
-                    hashesComputed++;
-                    
-                    if (hashBigInt < targetBigInt) {
-                        const elapsed = Date.now() - startTime;
-                        console.log(`JS fallback solution found! Nonce: ${nonce}`);
-                        
-                        // Calculate signature
-                        const sigInput = signature + nonce.toString(16).padStart(16, '0');
-                        const finalSigHex = sha3_256(sigInput);
-                        
-                        return {
-                            answer: Number(nonce),
-                            signature: finalSigHex,
-                            time: elapsed,
-                            iterations: hashesComputed,
-                            hashRate: Math.round(hashesComputed / (elapsed / 1000))
-                        };
-                    }
-                    
-                    nonce++;
-                    
-                    if (hashesComputed % 1000 === 0) {
-                        const elapsed = Date.now() - startTime;
-                        const hashRate = elapsed > 0 ? Math.round(hashesComputed / (elapsed / 1000)) : 0;
-                        const progress = Math.min(100, (Number(nonce) / Number(maxNonce)) * 100);
-                        
-                        updatePowStatus(
-                            `JS Fallback... ${hashesComputed} hashes, ${hashRate} H/s`,
-                            'mining',
-                            progress
-                        );
-                    }
-                    
-                    if (Date.now() - startTime > 10000) {
-                        throw new Error('JS solver timeout');
-                    }
-                }
-                
-                throw new Error('No solution found in JS fallback');
-            }
-        }
-
-        // ==============================
-        // UNIFIED SOLVER WITH FALLBACKS
-        // ==============================
-
-        class UnifiedPoWSolver {
-            constructor() {
-                this.wasmSolver = new WASMPoWSolver();
-                this.jsSolver = new JavaScriptPoWSolver();
-                this.currentSolver = null;
-            }
-
-            async initialize() {
-                try {
-                    const loaded = await this.wasmSolver.loadWasm('sha3_wasm_bg.7b9ca65ddd.wasm');
-                    if (loaded) {
-                        this.currentSolver = this.wasmSolver;
-                        console.log('Using WASM solver');
-                        return true;
-                    }
-                } catch (error) {
-                    console.warn('WASM solver failed to initialize:', error);
-                }
-                
-                console.log('Falling back to JavaScript solver');
-                this.currentSolver = this.jsSolver;
-                return false;
-            }
-
-            async solve(challenge, salt, difficulty, signature) {
-                if (!this.currentSolver) {
-                    await this.initialize();
-                }
-                
-                try {
-                    return await this.currentSolver.solve(challenge, salt, difficulty, signature);
-                } catch (error) {
-                    console.log(`${this.currentSolver.constructor.name} failed:`, error);
-                    
-                    // Switch to JS solver if WASM fails
-                    if (this.currentSolver === this.wasmSolver) {
-                        console.log('Switching to JavaScript solver...');
-                        this.currentSolver = this.jsSolver;
-                        return await this.jsSolver.solve(challenge, salt, difficulty, signature);
-                    }
-                    
-                    throw error;
-                }
+                return {
+                    powHeader: encoded,
+                    answer: answer,
+                    iterations: 1, // WASM solves in one call
+                    time: 0 // We don't track time in this simple approach
+                };
             }
         }
 
@@ -1075,7 +822,7 @@
         const messageInput = document.getElementById('message');
         const sendBtn = document.getElementById('sendBtn');
         const clearBtn = document.getElementById('clearBtn');
-        const responseDisplay = document.getElementById('response');
+        const chatHistory = document.getElementById('chatHistory');
         const statusBar = document.getElementById('statusBar');
         const powStatus = document.getElementById('powStatus');
         const powMessage = document.getElementById('powMessage');
@@ -1096,21 +843,89 @@
             sessionId: null,
             lastResponseId: null
         };
+        
+        // Chat History Management
+        let messages = [];
 
-        // Initialize WASM solver
-        const wasmSolver = new WASMPoWSolver();
+        // Load messages from localStorage
+        try {
+            const savedMessages = localStorage.getItem('deepseek_chat_history');
+            if (savedMessages) {
+                messages = JSON.parse(savedMessages);
+            }
+        } catch (e) {
+            console.error('Failed to load chat history', e);
+        }
 
         // ==============================
-        // UTILITY FUNCTIONS
+        // CHAT UI RENDERER
         // ==============================
 
-        // Generate UUID
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
+        function saveMessages() {
+            localStorage.setItem('deepseek_chat_history', JSON.stringify(messages));
+        }
+
+        function renderMessages() {
+            chatHistory.innerHTML = '';
+            
+            if (messages.length === 0) {
+                chatHistory.innerHTML = `
+                <div class="empty-state">
+                    <p>Start a new conversation</p>
+                    <p class="info-text">Messages are saved automatically.</p>
+                </div>`;
+                return;
+            }
+
+            messages.forEach(msg => {
+                const wrapper = document.createElement('div');
+                wrapper.className = `chat-message ${msg.role}`;
+                
+                // Content
+                const contentDiv = document.createElement('div');
+                contentDiv.textContent = msg.content;
+                contentDiv.style.whiteSpace = 'pre-wrap';
+                wrapper.appendChild(contentDiv);
+
+                // Usage stats for assistant if available
+                if (msg.role === 'assistant' && msg.usage) {
+                    const usageDiv = document.createElement('div');
+                    usageDiv.className = 'token-usage';
+                    usageDiv.textContent = `Tokens: ${msg.usage.total_tokens} (${msg.usage.prompt_tokens} + ${msg.usage.completion_tokens})`;
+                    wrapper.appendChild(usageDiv);
+                }
+
+                chatHistory.appendChild(wrapper);
+                
+                // Add label
+                const label = document.createElement('div');
+                label.className = 'message-role-label';
+                label.textContent = msg.role;
+                chatHistory.appendChild(label);
             });
+
+            // Scroll to bottom
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function appendMessage(role, content) {
+            const msg = { role, content, timestamp: Date.now() };
+            messages.push(msg);
+            saveMessages();
+            renderMessages();
+            return msg;
+        }
+
+        function updateLastAssistantMessage(content, usage = null) {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg && lastMsg.role === 'assistant') {
+                lastMsg.content = content;
+                if (usage) lastMsg.usage = usage;
+                saveMessages();
+                renderMessages();
+            } else {
+                appendMessage('assistant', content);
+            }
         }
 
         // Generate client_stream_id
@@ -1191,21 +1006,33 @@
             const decoder = new TextDecoder();
             let fullResponse = '';
             let responseMessageId = null;
+            let buffer = '';
             
-            responseDisplay.textContent = '';
-            
+            // Create a placeholder message if needed
+            if (messages.length === 0 || messages[messages.length-1].role !== 'assistant') {
+                appendMessage('assistant', '...');
+            }
+
             try {
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
                     
+                    // Convert the Uint8Array to text
                     const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n\n');
+                    buffer += chunk;
+                    
+                    // Parse Server-Sent Events (SSE) format
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep the last partial line for the next chunk
                     
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
                             const data = line.substring(6);
-                            if (data === '[DONE]') continue;
+                            
+                            if (data === '[DONE]') {
+                                continue;
+                            }
                             
                             try {
                                 const parsed = JSON.parse(data);
@@ -1221,24 +1048,34 @@
                                 if (choices && choices[0]?.message?.content) {
                                     const content = choices[0].message.content;
                                     fullResponse += content;
-                                    responseDisplay.textContent = fullResponse;
+                                    updateLastAssistantMessage(fullResponse);
                                 }
                                 
                                 // Show usage stats if available
                                 const usage = parsed.data?.biz_data?.usage;
                                 if (usage) {
-                                    responseDisplay.textContent = fullResponse + 
-                                        `\n\n--- Token Usage ---\nPrompt: ${usage.prompt_tokens} | Completion: ${usage.completion_tokens} | Total: ${usage.total_tokens}`;
+                                    updateLastAssistantMessage(fullResponse, usage);
+                                }
+                                
+                                // Handle errors in the stream
+                                if (parsed.data?.biz_data?.error) {
+                                    console.error('Stream error:', parsed.data.biz_data.error);
+                                    throw new Error(parsed.data.biz_data.error);
                                 }
                                 
                             } catch (e) {
-                                // Not JSON, ignore
+                                // If it's not JSON, it might be part of the content
+                                if (data.trim() && data !== '[DONE]') {
+                                    fullResponse += data;
+                                    updateLastAssistantMessage(fullResponse);
+                                }
                             }
                         }
                     }
                 }
             } catch (error) {
                 console.error('Stream reading error:', error);
+                // Don't throw here - we might have partial content
             }
             
             return { responseMessageId, fullResponse };
@@ -1295,48 +1132,44 @@
             }
         }
 
-        // Replace wasmSolver with unifiedSolver
-        const unifiedSolver = new UnifiedPoWSolver();
+        // Initialize the solver
+        const powSolver = new DeepSeekPOW();
 
-        // Update solvePowWithWasm function
+        // Update the solvePowWithWasm function
         async function solvePowWithWasm(challengeData) {
             try {
                 updatePowStatus('Initializing PoW solver...', 'info', 0);
                 
-                // Use the unified solver
-                const result = await unifiedSolver.solve(
-                    challengeData.challenge,
-                    challengeData.salt,
-                    challengeData.difficulty,
-                    challengeData.signature
-                );
+                // Ensure WASM is loaded
+                if (!powSolver.hasher.isReady) {
+                    const initialized = await powSolver.initialize('sha3_wasm_bg.7b9ca65ddd.wasm');
+                    if (!initialized) {
+                        throw new Error('Failed to initialize WASM solver');
+                    }
+                }
+                
+                updatePowStatus('Solving PoW challenge...', 'mining', 50);
+                
+                // Solve the challenge
+                const result = await powSolver.solveChallenge(challengeData);
                 
                 updatePowStatus(
-                    `Solved! Answer: ${result.answer} (${result.iterations} iterations in ${result.time}ms)`,
+                    `Solved! Answer: ${result.answer}`,
                     'success',
                     100
                 );
                 
                 addDebugLog('PoW solved', result);
                 
-                // Construct PoW response header
-                const powResponse = {
-                    algorithm: challengeData.algorithm,
-                    challenge: challengeData.challenge,
-                    salt: challengeData.salt,
-                    answer: result.answer,
-                    signature: result.signature,
-                    target_path: challengeData.target_path
-                };
-                
                 return {
-                    powHeader: btoa(JSON.stringify(powResponse)),
+                    powHeader: result.powHeader,
                     iterations: result.iterations,
                     time: result.time
                 };
                 
             } catch (error) {
                 updatePowStatus(`PoW solving error: ${error.message}`, 'error', 0);
+                console.error('PoW solving error details:', error);
                 throw error;
             }
         }
@@ -1458,11 +1291,6 @@
             }
         }
 
-        // ==============================
-        // MAIN REQUEST HANDLER
-        // ==============================
-
-        // Update the sendRequest function to handle errors better
         async function sendRequest() {
             const message = messageInput.value.trim();
             if (!message) {
@@ -1475,10 +1303,12 @@
             sendBtn.disabled = true;
             const originalText = sendBtn.textContent;
             sendBtn.innerHTML = '<span class="spinner"></span> Processing...';
-            responseDisplay.textContent = 'Working...';
-            responseDisplay.className = '';
 
             try {
+                // Add user message to history
+                appendMessage('user', message);
+                messageInput.value = ''; // Clear input
+
                 // Initialize conversation if needed
                 if (!currentConversation.sessionId) {
                     await startNewConversation();
@@ -1497,27 +1327,24 @@
                 // Step 4: Display result
                 if (typeof result === 'string') {
                     // Already displayed by parseStreamResponse
-                    showStatus(`Success! PoW solved in ${time}ms (${iterations} iterations)`, 'success');
+                    showStatus(`Success! PoW solved`, 'success');
                 } else if (result.choices && result.choices.length > 0) {
                     const reply = result.choices[0].message.content;
-                    responseDisplay.textContent = reply;
+                    updateLastAssistantMessage(reply, result.usage);
                     
-                    if (result.usage) {
-                        responseDisplay.textContent += `\n\n--- Token Usage ---\nPrompt: ${result.usage.prompt_tokens} | Completion: ${result.usage.completion_tokens} | Total: ${result.usage.total_tokens}`;
-                    }
-                    
-                    showStatus(`Success! PoW solved in ${time}ms (${iterations} iterations)`, 'success');
+                    showStatus(`Success!`, 'success');
                 } else if (result.message || result.content) {
-                    responseDisplay.textContent = result.message || result.content;
+                    appendMessage('assistant', result.message || result.content);
                     showStatus('Success!', 'success');
                 } else {
-                    responseDisplay.textContent = JSON.stringify(result, null, 2);
+                    appendMessage('assistant', JSON.stringify(result, null, 2));
                     showStatus('Success!', 'success');
                 }
                 
             } catch (error) {
                 console.error('Request failed:', error);
-                responseDisplay.textContent = `Error: ${error.message}\n\nPlease check:\n1. WASM file is in the correct location\n2. Your proxy server is running\n3. Browser console for detailed errors`;
+                // Add error message to chat
+                appendMessage('assistant', `Error: ${error.message}`);
                 showStatus(`Error: ${error.message}`, 'error');
             } finally {
                 sendBtn.disabled = false;
@@ -1585,17 +1412,18 @@
             return apiUrlSelect.value || COMPLETION_ENDPOINT;
         }
 
-        // Clear response and start new chat
-        async function clearResponse() {
-            responseDisplay.textContent = 'Response will appear here...';
-            responseDisplay.className = 'response-placeholder';
-            powStatus.className = 'pow-status';
-            debugInfo.innerHTML = 'Debug information will appear here...';
-            
-            // Reset conversation
-            await startNewConversation();
-            
-            showStatus('New chat session started', 'info');
+        // Clear chat history
+        async function clearChat() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                messages = [];
+                saveMessages();
+                renderMessages();
+                
+                // Reset conversation
+                await startNewConversation();
+                
+                showStatus('Chat history cleared', 'info');
+            }
         }
 
         // Toggle debug info
@@ -1607,7 +1435,7 @@
 
         // Event listeners
         sendBtn.addEventListener('click', sendRequest);
-        clearBtn.addEventListener('click', clearResponse);
+        clearBtn.addEventListener('click', clearChat);
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -1615,7 +1443,7 @@
                 sendRequest();
             }
             if (e.key === 'Escape') {
-                clearResponse();
+                // Optional: stop generating?
             }
             if (e.ctrlKey && e.shiftKey && e.key === 'C') {
                 configToggle.click();
@@ -1658,19 +1486,23 @@
             // Initialize config state
             initializeConfigState();
             
-            // Pre-initialize solver
+            // Render chat history
+            renderMessages();
+            
+            // Pre-load WASM module
             setTimeout(() => {
-                unifiedSolver.initialize()
+                console.log('Pre-loading WASM module...');
+                powSolver.initialize('sha3_wasm_bg.7b9ca65ddd.wasm')
                     .then(initialized => {
                         if (initialized) {
                             showStatus('WASM PoW solver ready', 'success');
                         } else {
-                            showStatus('Using JavaScript PoW solver', 'warning');
+                            showStatus('WASM solver failed to load', 'warning');
                         }
                     })
                     .catch(error => {
-                        console.error('Solver initialization error:', error);
-                        showStatus(`Solver error: ${error.message}`, 'error');
+                        console.error('WASM pre-load error:', error);
+                        showStatus(`WASM error: ${error.message}`, 'error');
                     });
             }, 500);
             
