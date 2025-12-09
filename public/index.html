@@ -162,7 +162,8 @@
 
         input, textarea, select {
             width: 100%;
-            padding: 10px 12px;
+            padding: 0.5rem;
+            vertical-align: top;
             border: 1px solid var(--border);
             border-radius: var(--radius);
             font-family: var(--font-ui);
@@ -184,10 +185,9 @@
 
         textarea {
             resize: none;
-            min-height: 120px;
             font-family: var(--font-mono);
             font-size: 13px;
-            line-height: 1.5;
+            /* line-height: 1.5; */
         }
 
         .url-display {
@@ -317,6 +317,12 @@
             line-height: 1.5;
             position: relative;
             word-wrap: break-word;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-content {
+            white-space: pre-wrap;
         }
 
         .chat-message.user {
@@ -564,8 +570,10 @@
         }
 
         #message {
-            padding-right: 48px;
-            min-height: 56px;
+            padding-right: 46px;
+            min-height: 46px;
+            max-height: 200px;
+            overflow-y: auto;
         }
 
         .send-icon-btn {
@@ -788,7 +796,7 @@
             </div>
             
             <div class="debug-toggle">
-                <button id="debugToggle">Show Debug Info</button>
+                <button id="debugToggle" type="button">Show Debug Info</button>
             </div>
             
             <div class="debug-info" id="debugInfo">
@@ -1101,11 +1109,15 @@
                 
                 // Content
                 const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                
+                // Always use pre-wrap to preserve newlines in both plain text and the text portions of HTML messages
+                contentDiv.style.whiteSpace = 'pre-wrap';
+                
                 if (msg.role === 'assistant' && msg.isHtml) {
                      contentDiv.innerHTML = msg.content;
                 } else {
                      contentDiv.textContent = msg.content;
-                     contentDiv.style.whiteSpace = 'pre-wrap';
                 }
                 wrapper.appendChild(contentDiv);
 
@@ -1312,7 +1324,10 @@
 
         // Add debug log
         function addDebugLog(message, data = null) {
-            if (!debugEnabled) return;
+            // Clear placeholder text if it exists (check first child to see if it's the text node)
+            if (debugInfo.childNodes.length === 1 && debugInfo.textContent.includes('Debug information')) {
+                debugInfo.textContent = '';
+            }
             
             const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
             const logEntry = document.createElement('div');
@@ -1865,6 +1880,7 @@
                 // Add user message to history
                 appendMessage('user', message);
                 messageInput.value = ''; // Clear input
+                messageInput.style.height = 'auto'; // Reset height
 
                 // Initialize conversation if needed
                 if (!currentConversation.sessionId) {
@@ -2036,6 +2052,12 @@
                 debugToggle.click();
                 e.preventDefault();
             }
+        });
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
 
         // Example messages on double-click
