@@ -132,7 +132,7 @@ app.get('/', (_req, res) => {
                 <ul>
                     <li><code>POST /api/v0/chat/:endpoint</code> - Chat endpoints</li>
                     <li><code>POST /api/v0/chat_session/:endpoint</code> - Session endpoints</li>
-                    <li><code>GET /health</code> - Health check</li>
+                    <li><code>GET</code> <a href='/health'><code>/health</code></a> - Health check</li>
                 </ul>
                 <p>Base URL: ${DEEPSEEK_BASE_URL}</p>
             </body>
