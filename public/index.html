@@ -534,10 +534,538 @@
 
     <script>
         // ==============================
+        // WASM-BASED PoW SOLVER
+        // ==============================
+
+        class WASMPoWSolver {
+            constructor() {
+                this.wasmInstance = null;
+                this.memory = null;
+                this.exports = null;
+                this.isReady = false;
+                this.initialized = false;
+            }
+
+            async loadWasm(wasmUrl) {
+                try {
+                    updatePowStatus('Loading WASM module...', 'info', 0);
+                    
+                    const response = await fetch(wasmUrl);
+                    const bytes = await response.arrayBuffer();
+                    
+                    // Minimal import object
+                    const importObject = {
+                        env: {
+                            memory: new WebAssembly.Memory({ initial: 256 }),
+                        },
+                        // Add some stubs for common functions
+                        imports: {
+                            log: console.log,
+                            error: console.error
+                        }
+                    };
+
+                    const { instance } = await WebAssembly.instantiate(bytes, importObject);
+                    
+                    this.wasmInstance = instance;
+                    this.exports = instance.exports;
+                    this.memory = this.exports.memory;
+                    this.isReady = true;
+                    
+                    console.log('WASM loaded successfully');
+                    console.log('Available exports:', Object.keys(this.exports));
+                    
+                    // Test the functions
+                    await this.testWasmFunctions();
+                    
+                    updatePowStatus('WASM module ready', 'success', 100);
+                    return true;
+                    
+                } catch (error) {
+                    console.error('Failed to load WASM:', error);
+                    updatePowStatus(`WASM load failed: ${error.message}`, 'error', 0);
+                    return false;
+                }
+            }
+
+            async testWasmFunctions() {
+                try {
+                    console.log('Testing WASM functions...');
+                    
+                    // Test wasm_deepseek_hash_v1 with simple input
+                    const testInput = new TextEncoder().encode('test');
+                    const testOffset = 1024;
+                    
+                    // Get fresh memory view
+                    const memoryView = new Uint8Array(this.memory.buffer);
+                    
+                    // Ensure memory is large enough
+                    if (testOffset + testInput.length > memoryView.length) {
+                        console.warn('Memory too small, attempting to grow...');
+                        this.memory.grow(1); // Grow by 1 page (64KB)
+                    }
+                    
+                    // Write test data
+                    const freshMemoryView = new Uint8Array(this.memory.buffer);
+                    freshMemoryView.set(testInput, testOffset);
+                    
+                    // Call hash function
+                    const hashPtr = this.exports.wasm_deepseek_hash_v1(testOffset, testInput.length);
+                    console.log('Hash function test - returned pointer:', hashPtr);
+                    
+                    if (hashPtr && hashPtr !== 0) {
+                        const hashBytes = new Uint8Array(this.memory.buffer, hashPtr, 32);
+                        const hashHex = Array.from(hashBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+                        console.log('Test hash result:', hashHex);
+                    }
+                    
+                    this.initialized = true;
+                    
+                } catch (error) {
+                    console.error('WASM function test failed:', error);
+                }
+            }
+
+            // Helper: hex string to bytes
+            hexToBytes(hex) {
+                const bytes = new Uint8Array(hex.length / 2);
+                for (let i = 0; i < hex.length; i += 2) {
+                    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+                }
+                return bytes;
+            }
+
+            // Helper: bytes to hex string
+            bytesToHex(bytes) {
+                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            // Calculate target from difficulty
+            calculateTargetFromDifficulty(difficulty) {
+                const maxHash = (1n << 256n) - 1n;
+                const targetBigInt = maxHash / BigInt(difficulty);
+                let targetHex = targetBigInt.toString(16);
+                targetHex = targetHex.padStart(64, '0');
+                return targetHex;
+            }
+
+            // Simpler approach: Use the algorithm from Python code but in JS
+            // Let's implement the same logic as in the Python pow.py
+            async solve(challenge, salt, difficulty, signature) {
+                if (!this.isReady) {
+                    throw new Error('WASM module not loaded');
+                }
+
+                console.log('Starting PoW solve...');
+                console.log('Challenge:', challenge);
+                console.log('Salt:', salt);
+                console.log('Difficulty:', difficulty);
+                
+                const targetHex = this.calculateTargetFromDifficulty(difficulty);
+                const targetBigInt = BigInt('0x' + targetHex);
+                
+                // Convert inputs to bytes
+                const challengeBytes = this.hexToBytes(challenge);
+                const saltBytes = this.hexToBytes(salt);
+                
+                // Combine challenge + salt as prefix
+                const prefixBytes = new Uint8Array(challengeBytes.length + saltBytes.length);
+                prefixBytes.set(challengeBytes);
+                prefixBytes.set(saltBytes, challengeBytes.length);
+                
+                let nonce = 0n;
+                const maxNonce = 1000000n; // Limit for browser safety
+                const startTime = Date.now();
+                let hashesComputed = 0;
+                
+                // We'll use a simpler approach: try calling wasm_solve with the correct parameters
+                // First, let's see if we can get wasm_solve to work by examining what it expects
+                
+                // Based on the Python code, wasm_solve likely expects:
+                // 1. Pointer to prefix bytes (challenge + salt)
+                // 2. Prefix length
+                // 3. Pointer to target bytes (hex string)
+                // 4. Target length
+                
+                try {
+                    // Convert prefix to base64 like the Python code does
+                    const prefixBase64 = btoa(String.fromCharCode(...prefixBytes));
+                    const targetHexStr = targetHex;
+                    
+                    console.log('Prefix (base64):', prefixBase64);
+                    console.log('Target (hex):', targetHexStr);
+                    
+                    // Encode strings
+                    const encoder = new TextEncoder();
+                    const prefixEncoded = encoder.encode(prefixBase64);
+                    const targetEncoded = encoder.encode(targetHexStr);
+                    
+                    // Allocate space in memory - use fixed offsets
+                    const memory = this.memory;
+                    const pageSize = 64 * 1024; // 64KB
+                    
+                    // Grow memory if needed
+                    const neededBytes = 4096 + prefixEncoded.length + targetEncoded.length;
+                    const currentPages = memory.buffer.byteLength / pageSize;
+                    const neededPages = Math.ceil(neededBytes / pageSize);
+                    
+                    if (neededPages > currentPages) {
+                        memory.grow(neededPages - currentPages);
+                    }
+                    
+                    // Use fresh memory view
+                    const memoryView = new Uint8Array(memory.buffer);
+                    
+                    // Write data to memory at fixed offsets
+                    const prefixOffset = 1024;
+                    const targetOffset = prefixOffset + prefixEncoded.length + 1024;
+                    
+                    memoryView.set(prefixEncoded, prefixOffset);
+                    memoryView.set(targetEncoded, targetOffset);
+                    
+                    // Try calling wasm_solve with different parameter combinations
+                    let noncePtr;
+                    
+                    // Try: wasm_solve(prefix_ptr, prefix_len, target_ptr, target_len)
+                    try {
+                        noncePtr = this.exports.wasm_solve(prefixOffset, prefixEncoded.length, targetOffset, targetEncoded.length);
+                        console.log('wasm_solve returned pointer:', noncePtr);
+                    } catch (error) {
+                        console.log('First signature failed, trying different one...');
+                        // Try: wasm_solve(prefix_ptr, target_ptr) - without lengths
+                        noncePtr = this.exports.wasm_solve(prefixOffset, targetOffset);
+                        console.log('wasm_solve (2 params) returned pointer:', noncePtr);
+                    }
+                    
+                    if (noncePtr && noncePtr !== 0) {
+                        // Read 8-byte nonce from the pointer
+                        const nonceBytes = new Uint8Array(memory.buffer, noncePtr, 8);
+                        const nonceView = new DataView(nonceBytes.buffer, nonceBytes.byteOffset, 8);
+                        const nonce = nonceView.getBigUint64(0, true); // Little endian
+                        
+                        console.log('Found nonce via wasm_solve:', Number(nonce));
+                        
+                        // Calculate signature
+                        const sigInput = signature + nonce.toString(16).padStart(16, '0');
+                        const sigInputBytes = encoder.encode(sigInput);
+                        const sigInputOffset = targetOffset + targetEncoded.length + 1024;
+                        
+                        memoryView.set(sigInputBytes, sigInputOffset);
+                        const finalSigPtr = this.exports.wasm_deepseek_hash_v1(sigInputOffset, sigInputBytes.length);
+                        const finalSigBytes = new Uint8Array(memory.buffer, finalSigPtr, 32);
+                        const finalSigHex = this.bytesToHex(finalSigBytes);
+                        
+                        return {
+                            answer: Number(nonce),
+                            signature: finalSigHex,
+                            time: Date.now() - startTime,
+                            iterations: 1,
+                            hashRate: 0
+                        };
+                    } else {
+                        console.log('wasm_solve returned null/zero, falling back to manual solve...');
+                    }
+                    
+                } catch (error) {
+                    console.log('wasm_solve approach failed, falling back:', error);
+                }
+                
+                // Fallback: Manual solving using wasm_deepseek_hash_v1
+                console.log('Starting manual solving...');
+                
+                return await this.solveManually(challenge, salt, difficulty, signature);
+            }
+
+            // Manual solving using wasm_deepseek_hash_v1
+            async solveManually(challenge, salt, difficulty, signature) {
+                const targetHex = this.calculateTargetFromDifficulty(difficulty);
+                const targetBigInt = BigInt('0x' + targetHex);
+                
+                // Convert inputs to bytes
+                const challengeBytes = this.hexToBytes(challenge);
+                const saltBytes = this.hexToBytes(salt);
+                
+                // Combine challenge + salt
+                const prefixBytes = new Uint8Array(challengeBytes.length + saltBytes.length);
+                prefixBytes.set(challengeBytes);
+                prefixBytes.set(saltBytes, challengeBytes.length);
+                
+                let nonce = 0n;
+                const maxNonce = 100000n; // Reduced for browser
+                const startTime = Date.now();
+                let hashesComputed = 0;
+                let lastReportTime = startTime;
+                
+                const memory = this.memory;
+                const encoder = new TextEncoder();
+                
+                while (nonce < maxNonce) {
+                    // IMPORTANT: Get fresh memory view every iteration to avoid detached buffer
+                    const memoryView = new Uint8Array(memory.buffer);
+                    
+                    // Convert nonce to 8-byte little-endian
+                    const nonceBytes = new Uint8Array(8);
+                    const nonceView = new DataView(nonceBytes.buffer);
+                    nonceView.setBigUint64(0, nonce, true);
+                    
+                    // Combine prefix + nonce
+                    const data = new Uint8Array(prefixBytes.length + nonceBytes.length);
+                    data.set(prefixBytes);
+                    data.set(nonceBytes, prefixBytes.length);
+                    
+                    // Write to memory at a fixed offset
+                    const dataOffset = 2048;
+                    
+                    // Ensure we have enough memory
+                    if (dataOffset + data.length > memoryView.length) {
+                        // Calculate needed pages
+                        const pageSize = 64 * 1024;
+                        const neededBytes = dataOffset + data.length;
+                        const currentPages = memory.buffer.byteLength / pageSize;
+                        const neededPages = Math.ceil(neededBytes / pageSize);
+                        
+                        if (neededPages > currentPages) {
+                            memory.grow(neededPages - currentPages);
+                            // After growing, get fresh view
+                            continue; // Retry this iteration with fresh memory
+                        }
+                    }
+                    
+                    // Write data to memory
+                    memoryView.set(data, dataOffset);
+                    
+                    // Call hash function
+                    const hashPtr = this.exports.wasm_deepseek_hash_v1(dataOffset, data.length);
+                    
+                    // Read hash using fresh view
+                    const freshMemoryView = new Uint8Array(memory.buffer);
+                    const hashBytes = freshMemoryView.slice(hashPtr, hashPtr + 32);
+                    const hashHex = this.bytesToHex(hashBytes);
+                    const hashBigInt = BigInt('0x' + hashHex);
+                    
+                    hashesComputed++;
+                    
+                    // Check if solution found
+                    if (hashBigInt < targetBigInt) {
+                        const elapsed = Date.now() - startTime;
+                        console.log(`Manual solution found! Nonce: ${nonce}`);
+                        
+                        // Calculate final signature
+                        const sigInput = signature + nonce.toString(16).padStart(16, '0');
+                        const sigInputBytes = encoder.encode(sigInput);
+                        const sigInputOffset = dataOffset + data.length + 1024;
+                        
+                        // Write signature input
+                        freshMemoryView.set(sigInputBytes, sigInputOffset);
+                        const finalSigPtr = this.exports.wasm_deepseek_hash_v1(sigInputOffset, sigInputBytes.length);
+                        const finalSigBytes = freshMemoryView.slice(finalSigPtr, finalSigPtr + 32);
+                        const finalSigHex = this.bytesToHex(finalSigBytes);
+                        
+                        return {
+                            answer: Number(nonce),
+                            signature: finalSigHex,
+                            time: elapsed,
+                            iterations: hashesComputed,
+                            hashRate: Math.round(hashesComputed / (elapsed / 1000))
+                        };
+                    }
+                    
+                    nonce++;
+                    
+                    // Report progress
+                    if (Date.now() - lastReportTime > 1000) {
+                        lastReportTime = Date.now();
+                        const elapsed = lastReportTime - startTime;
+                        const hashRate = elapsed > 0 ? Math.round(hashesComputed / (elapsed / 1000)) : 0;
+                        const progress = Math.min(100, (Number(nonce) / Number(maxNonce)) * 100);
+                        
+                        updatePowStatus(
+                            `Mining... ${hashesComputed} hashes, ${hashRate} H/s`,
+                            'mining',
+                            progress
+                        );
+                    }
+                    
+                    // Timeout after 15 seconds
+                    if (Date.now() - startTime > 15000) {
+                        throw new Error('PoW solving timeout after 15 seconds');
+                    }
+                }
+                
+                throw new Error(`No solution found within ${maxNonce} iterations`);
+            }
+        }
+
+        // ==============================
+        // PURE JAVASCRIPT FALLBACK
+        // ==============================
+
+        class JavaScriptPoWSolver {
+            constructor() {
+                // Simple SHA3-256 implementation for fallback
+                this.initializeSHA3();
+            }
+
+            initializeSHA3() {
+                // Import SHA3 from CDN if not available
+                if (typeof sha3_256 === 'undefined') {
+                    console.log('Loading SHA3 library...');
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/js-sha3/0.9.3/sha3.min.js';
+                    script.onload = () => console.log('SHA3 loaded');
+                    document.head.appendChild(script);
+                }
+            }
+
+            hexToBytes(hex) {
+                const bytes = new Uint8Array(hex.length / 2);
+                for (let i = 0; i < hex.length; i += 2) {
+                    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+                }
+                return bytes;
+            }
+
+            bytesToHex(bytes) {
+                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            calculateTargetFromDifficulty(difficulty) {
+                const maxHash = (1n << 256n) - 1n;
+                const targetBigInt = maxHash / BigInt(difficulty);
+                let targetHex = targetBigInt.toString(16);
+                targetHex = targetHex.padStart(64, '0');
+                return targetHex;
+            }
+
+            async solve(challenge, salt, difficulty, signature) {
+                console.log('Using JavaScript fallback solver...');
+                
+                const targetHex = this.calculateTargetFromDifficulty(difficulty);
+                const targetBigInt = BigInt('0x' + targetHex);
+                
+                const challengeBytes = this.hexToBytes(challenge);
+                const saltBytes = this.hexToBytes(salt);
+                
+                const prefixBytes = new Uint8Array(challengeBytes.length + saltBytes.length);
+                prefixBytes.set(challengeBytes);
+                prefixBytes.set(saltBytes, challengeBytes.length);
+                
+                let nonce = 0n;
+                const maxNonce = 50000n; // Very small for JS fallback
+                const startTime = Date.now();
+                let hashesComputed = 0;
+                
+                while (nonce < maxNonce) {
+                    const nonceBytes = new Uint8Array(8);
+                    const nonceView = new DataView(nonceBytes.buffer);
+                    nonceView.setBigUint64(0, nonce, true);
+                    
+                    const data = new Uint8Array(prefixBytes.length + nonceBytes.length);
+                    data.set(prefixBytes);
+                    data.set(nonceBytes, prefixBytes.length);
+                    
+                    // Convert to string for SHA3 library
+                    const dataStr = String.fromCharCode(...data);
+                    const hashHex = sha3_256(dataStr);
+                    const hashBigInt = BigInt('0x' + hashHex);
+                    
+                    hashesComputed++;
+                    
+                    if (hashBigInt < targetBigInt) {
+                        const elapsed = Date.now() - startTime;
+                        console.log(`JS fallback solution found! Nonce: ${nonce}`);
+                        
+                        // Calculate signature
+                        const sigInput = signature + nonce.toString(16).padStart(16, '0');
+                        const finalSigHex = sha3_256(sigInput);
+                        
+                        return {
+                            answer: Number(nonce),
+                            signature: finalSigHex,
+                            time: elapsed,
+                            iterations: hashesComputed,
+                            hashRate: Math.round(hashesComputed / (elapsed / 1000))
+                        };
+                    }
+                    
+                    nonce++;
+                    
+                    if (hashesComputed % 1000 === 0) {
+                        const elapsed = Date.now() - startTime;
+                        const hashRate = elapsed > 0 ? Math.round(hashesComputed / (elapsed / 1000)) : 0;
+                        const progress = Math.min(100, (Number(nonce) / Number(maxNonce)) * 100);
+                        
+                        updatePowStatus(
+                            `JS Fallback... ${hashesComputed} hashes, ${hashRate} H/s`,
+                            'mining',
+                            progress
+                        );
+                    }
+                    
+                    if (Date.now() - startTime > 10000) {
+                        throw new Error('JS solver timeout');
+                    }
+                }
+                
+                throw new Error('No solution found in JS fallback');
+            }
+        }
+
+        // ==============================
+        // UNIFIED SOLVER WITH FALLBACKS
+        // ==============================
+
+        class UnifiedPoWSolver {
+            constructor() {
+                this.wasmSolver = new WASMPoWSolver();
+                this.jsSolver = new JavaScriptPoWSolver();
+                this.currentSolver = null;
+            }
+
+            async initialize() {
+                try {
+                    const loaded = await this.wasmSolver.loadWasm('sha3_wasm_bg.7b9ca65ddd.wasm');
+                    if (loaded) {
+                        this.currentSolver = this.wasmSolver;
+                        console.log('Using WASM solver');
+                        return true;
+                    }
+                } catch (error) {
+                    console.warn('WASM solver failed to initialize:', error);
+                }
+                
+                console.log('Falling back to JavaScript solver');
+                this.currentSolver = this.jsSolver;
+                return false;
+            }
+
+            async solve(challenge, salt, difficulty, signature) {
+                if (!this.currentSolver) {
+                    await this.initialize();
+                }
+                
+                try {
+                    return await this.currentSolver.solve(challenge, salt, difficulty, signature);
+                } catch (error) {
+                    console.log(`${this.currentSolver.constructor.name} failed:`, error);
+                    
+                    // Switch to JS solver if WASM fails
+                    if (this.currentSolver === this.wasmSolver) {
+                        console.log('Switching to JavaScript solver...');
+                        this.currentSolver = this.jsSolver;
+                        return await this.jsSolver.solve(challenge, salt, difficulty, signature);
+                    }
+                    
+                    throw error;
+                }
+            }
+        }
+
+        // ==============================
         // MAIN APPLICATION CODE
         // ==============================
 
-        // DOM Elements
+        // DOM Elements (already defined in your HTML)
         const configToggle = document.getElementById('configToggle');
         const configCard = document.getElementById('configCard');
         const apiUrlSelect = document.getElementById('apiUrl');
@@ -555,18 +1083,22 @@
         const debugToggle = document.getElementById('debugToggle');
         const debugInfo = document.getElementById('debugInfo');
 
-        // In your HTML app's configuration section
-        const SMART_PROXY_BASE = 'http://localhost:3000'; // Your proxy URL
-
-        // Default endpoint
+        // Configuration
+        const SMART_PROXY_BASE = 'http://localhost:3000';
         const CHALLENGE_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat/create_pow_challenge`;
         const COMPLETION_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat/completion`;
         const CREATE_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat_session/create`;
 
         // Application state
         let configExpanded = localStorage.getItem('configExpanded') !== 'false';
-        let powWorker = null;
         let debugEnabled = false;
+        let currentConversation = {
+            sessionId: null,
+            lastResponseId: null
+        };
+
+        // Initialize WASM solver
+        const wasmSolver = new WASMPoWSolver();
 
         // ==============================
         // UTILITY FUNCTIONS
@@ -581,17 +1113,14 @@
             });
         }
 
-        // Generate client_stream_id in format: YYYYMMDD-randomhex
+        // Generate client_stream_id
         function generateClientStreamId() {
-            // Part 1: Current date in YYYYMMDD format
             const date = new Date();
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             const datePart = `${year}${month}${day}`;
             
-            // Part 2: 16-character hex string (8 bytes = 16 hex chars)
-            // Using cryptographically secure random values
             const randomBytes = new Uint8Array(8);
             crypto.getRandomValues(randomBytes);
             const randomPart = Array.from(randomBytes)
@@ -654,275 +1183,72 @@
         }
 
         // ==============================
-        // PROOF-OF-WORK WORKER
+        // STREAM RESPONSE PARSER
         // ==============================
 
-        // Create Web Worker from Blob
-        // Updated worker code with SHA3-256 implementation
-        const workerCode = `
-            // ==============================
-            // SHA3-256 IMPLEMENTATION (Pure JavaScript)
-            // ==============================
-
-            self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/js-sha3/0.9.3/sha3.min.js');
-
-            // Keccak (SHA3) implementation - works in all browsers
-            class SHA3 {
-                static keccak(b, r, message, s, d) {
-                    // Keccak state
-                    const state = new Array(25).fill(0n);
-                    const blockSize = r / 8;
-                    const messageBytes = SHA3.textToBytes(message);
+        async function parseStreamResponse(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+            let responseMessageId = null;
+            
+            responseDisplay.textContent = '';
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
                     
-                    // Absorb phase
-                    for (let i = 0; i < messageBytes.length; i += blockSize) {
-                        const block = messageBytes.slice(i, i + blockSize);
-                        for (let j = 0; j < block.length; j++) {
-                            const index = Math.floor(j / 8);
-                            const shift = BigInt((j % 8) * 8);
-                            state[index] ^= BigInt(block[j]) << shift;
-                        }
-                        SHA3.keccakF(state);
-                    }
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n\n');
                     
-                    // Padding
-                    const padding = new Uint8Array(blockSize);
-                    padding[0] = s;
-                    padding[blockSize - 1] |= 0x80;
-                    
-                    for (let j = 0; j < padding.length; j++) {
-                        const index = Math.floor(j / 8);
-                        const shift = BigInt((j % 8) * 8);
-                        state[index] ^= BigInt(padding[j]) << shift;
-                    }
-                    SHA3.keccakF(state);
-                    
-                    // Squeeze phase
-                    const output = [];
-                    const outputBytes = d / 8;
-                    let offset = 0;
-                    
-                    while (output.length < outputBytes) {
-                        for (let i = 0; i < 8 && offset < 25; i++) {
-                            const lane = state[offset];
-                            for (let j = 0; j < 8 && output.length < outputBytes; j++) {
-                                output.push(Number((lane >> BigInt(j * 8)) & 0xffn));
-                            }
-                            offset++;
-                        }
-                        if (output.length < outputBytes) {
-                            SHA3.keccakF(state);
-                        }
-                    }
-                    
-                    return SHA3.bytesToHex(output.slice(0, outputBytes));
-                }
-                
-                static keccakF(state) {
-                    // Keccak-f[1600] permutation
-                    const rounds = 24;
-                    const RC = [
-                        0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an,
-                        0x8000000080008000n, 0x000000000000808bn, 0x0000000080000001n,
-                        0x8000000080008081n, 0x8000000000008009n, 0x000000000000008an,
-                        0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
-                        0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n,
-                        0x8000000000008003n, 0x8000000000008002n, 0x8000000000000080n,
-                        0x000000000000800an, 0x800000008000000an, 0x8000000080008081n,
-                        0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
-                    ];
-                    
-                    for (let round = 0; round < rounds; round++) {
-                        // Theta
-                        const C = new Array(5).fill(0n);
-                        const D = new Array(5).fill(0n);
-                        
-                        for (let x = 0; x < 5; x++) {
-                            C[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
-                        }
-                        
-                        for (let x = 0; x < 5; x++) {
-                            D[x] = C[(x + 4) % 5] ^ SHA3.rot64(C[(x + 1) % 5], 1);
-                        }
-                        
-                        for (let x = 0; x < 5; x++) {
-                            for (let y = 0; y < 5; y++) {
-                                state[x + 5 * y] ^= D[x];
-                            }
-                        }
-                        
-                        // Rho and Pi
-                        let x = 1, y = 0;
-                        let current = state[1];
-                        
-                        for (let t = 0; t < 24; t++) {
-                            const newX = y;
-                            const newY = (2 * x + 3 * y) % 5;
-                            const temp = state[newX + 5 * newY];
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            if (data === '[DONE]') continue;
                             
-                            state[newX + 5 * newY] = SHA3.rot64(current, ((t + 1) * (t + 2) / 2) % 64);
-                            current = temp;
-                            x = newX;
-                            y = newY;
-                        }
-                        
-                        // Chi
-                        for (let y = 0; y < 5; y++) {
-                            const T = new Array(5);
-                            for (let x = 0; x < 5; x++) {
-                                T[x] = state[x + 5 * y];
+                            try {
+                                const parsed = JSON.parse(data);
+                                
+                                // Extract response_message_id if available
+                                if (parsed.data?.biz_data?.response_message_id && !responseMessageId) {
+                                    responseMessageId = parsed.data.biz_data.response_message_id;
+                                    console.log('Found response_message_id:', responseMessageId);
+                                }
+                                
+                                // Extract and display content
+                                const choices = parsed.data?.biz_data?.choices;
+                                if (choices && choices[0]?.message?.content) {
+                                    const content = choices[0].message.content;
+                                    fullResponse += content;
+                                    responseDisplay.textContent = fullResponse;
+                                }
+                                
+                                // Show usage stats if available
+                                const usage = parsed.data?.biz_data?.usage;
+                                if (usage) {
+                                    responseDisplay.textContent = fullResponse + 
+                                        `\n\n--- Token Usage ---\nPrompt: ${usage.prompt_tokens} | Completion: ${usage.completion_tokens} | Total: ${usage.total_tokens}`;
+                                }
+                                
+                            } catch (e) {
+                                // Not JSON, ignore
                             }
-                            for (let x = 0; x < 5; x++) {
-                                state[x + 5 * y] = T[x] ^ ((~T[(x + 1) % 5]) & T[(x + 2) % 5]);
-                            }
                         }
-                        
-                        // Iota
-                        state[0] ^= RC[round];
                     }
                 }
-                
-                static rot64(x, n) {
-                    n = n % 64;
-                    return (x << BigInt(n)) | (x >> BigInt(64 - n));
-                }
-                
-                static textToBytes(text) {
-                    const bytes = new Uint8Array(text.length * 4);
-                    const encoder = new TextEncoder();
-                    const encoded = encoder.encode(text);
-                    bytes.set(encoded);
-                    return Array.from(bytes.slice(0, encoded.length));
-                }
-                
-                static bytesToHex(bytes) {
-                    return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
-                }
+            } catch (error) {
+                console.error('Stream reading error:', error);
             }
             
-            // ==============================
-            // MINING FUNCTIONS
-            // ==============================
-            
-            // Calculate target value: target = (2^256 - 1) / difficulty
-            function calculateTarget(difficulty) {
-                const MAX_HASH_VALUE = 2n ** 256n - 1n;
-                const difficultyBigInt = BigInt(difficulty);
-                return MAX_HASH_VALUE / difficultyBigInt;
-            }
-            
-            // Hash to BigInt (using our SHA3 implementation)
-            function sha3_256ToBigInt(message) {
-                const hashHex = self.sha3_256(message);
-                return BigInt('0x' + hashHex);
-            }
-            
-            // Main mining function
-            async function solvePowChallenge(challenge, salt, difficulty, challengeSignature) {
-                const target = calculateTarget(difficulty);
-                let nonce = 0;
-                const startTime = Date.now();
-                const maxNonce = 1000000; // Reduced for browser safety
-                
-                // Report progress
-                let lastReport = 0;
-                let hashesPerSecond = 0;
-                let lastTime = startTime;
-                
-                console.log(\`Worker: Starting PoW (difficulty: \${difficulty}, target: \${target})\`);
-                
-                while (nonce < maxNonce) {
-                    const inputString = challenge + salt + nonce.toString();
-                    const hashBigInt = sha3_256ToBigInt(inputString);
-                    
-                    // Check if hash < target
-                    if (hashBigInt < target) {
-                        const elapsed = Date.now() - startTime;
-                        console.log(\`Worker: Solved! Nonce: \${nonce}, Time: \${elapsed}ms\`);
-                        
-                        // Calculate final signature
-                        const finalSignatureInput = challengeSignature + nonce.toString();
-                        const finalSignature = self.sha3_256(finalSignatureInput);
-                        
-                        return {
-                            answer: nonce,
-                            signature: finalSignature,
-                            time: elapsed,
-                            iterations: nonce + 1,
-                            hashRate: Math.round((nonce + 1) / (elapsed / 1000))
-                        };
-                    }
-                    
-                    nonce++;
-                    
-                    // Report progress every 5000 iterations
-                    if (nonce - lastReport >= 5000) {
-                        lastReport = nonce;
-                        const currentTime = Date.now();
-                        const elapsedSinceLast = currentTime - lastTime;
-                        hashesPerSecond = elapsedSinceLast > 0 ? Math.round(5000 / (elapsedSinceLast / 1000)) : 0;
-                        lastTime = currentTime;
-                        
-                        const progress = Math.min(100, (nonce / 500000) * 100);
-                        
-                        self.postMessage({
-                            type: 'progress',
-                            progress: progress,
-                            nonce: nonce,
-                            elapsed: currentTime - startTime,
-                            hashRate: hashesPerSecond
-                        });
-                    }
-                }
-                
-                throw new Error(\`Could not find solution within \${maxNonce} iterations\`);
-            }
-            
-            // ==============================
-            // WORKER MESSAGE HANDLER
-            // ==============================
-            
-            self.onmessage = async function(e) {
-                const { challenge, salt, difficulty, challengeSignature } = e.data;
-                
-                try {
-                    console.log(\`Worker: Received challenge: \${challenge.substring(0, 16)}...\`);
-                    self.postMessage({ type: 'started' });
-                    
-                    const result = await solvePowChallenge(
-                        challenge,
-                        salt,
-                        difficulty,
-                        challengeSignature
-                    );
-                    
-                    self.postMessage({
-                        type: 'solved',
-                        ...result
-                    });
-                } catch (error) {
-                    console.error(\`Worker error: \`, error);
-                    self.postMessage({
-                        type: 'error',
-                        error: error.message
-                    });
-                }
-            };
-            
-            console.log('Worker: SHA3-256 miner loaded and ready');
-        `;
-
-        // Function to create the worker with the new code
-        function createPowWorker() {
-            const blob = new Blob([workerCode], { type: 'application/javascript' });
-            return new Worker(URL.createObjectURL(blob));
+            return { responseMessageId, fullResponse };
         }
 
         // ==============================
         // API FUNCTIONS
         // ==============================
 
-        // Request PoW challenge from server
+        // Request PoW challenge
         async function requestPowChallenge() {
             updatePowStatus('Requesting PoW challenge...', 'info', 0);
             addDebugLog('Requesting PoW challenge');
@@ -953,13 +1279,11 @@
                 const result = await response.json();
                 addDebugLog('Received PoW challenge', result);
                 
-                // Navigate through nested response structure
                 const challengeData = result.data?.biz_data?.challenge;
                 if (!challengeData) {
                     throw new Error('Invalid challenge response structure');
                 }
                 
-                // Check if challenge is expired
                 if (challengeData.expire_at < Date.now()) {
                     throw new Error('Challenge expired');
                 }
@@ -971,114 +1295,53 @@
             }
         }
 
-        // Solve PoW challenge using Web Worker
-        function solvePowWithWorker(challengeData) {
-            return new Promise((resolve, reject) => {
-                if (!powWorker) {
-                    powWorker = createPowWorker();
-                }
+        // Replace wasmSolver with unifiedSolver
+        const unifiedSolver = new UnifiedPoWSolver();
+
+        // Update solvePowWithWasm function
+        async function solvePowWithWasm(challengeData) {
+            try {
+                updatePowStatus('Initializing PoW solver...', 'info', 0);
                 
-                // Set up message handler
-                powWorker.onmessage = function(e) {
-                    const data = e.data;
-                    
-                    switch (data.type) {
-                        case 'started':
-                            updatePowStatus('Mining for solution...', 'mining', 0);
-                            addDebugLog('PoW mining started');
-                            break;
-                            
-                        case 'progress':
-                            updatePowStatus(
-                                `Mining... (${data.nonce} attempts, ${data.elapsed}ms)`,
-                                'mining',
-                                data.progress
-                            );
-                            break;
-                            
-                        case 'solved':
-                            updatePowStatus(
-                                `Solved! Answer: ${data.answer} (${data.iterations} iterations in ${data.time}ms)`,
-                                'success',
-                                100
-                            );
-                            addDebugLog('PoW solved', data);
-                            
-                            // Construct final PoW response
-                            const powResponse = {
-                                algorithm: challengeData.algorithm,
-                                challenge: challengeData.challenge,
-                                salt: challengeData.salt,
-                                answer: data.answer,
-                                signature: data.signature,
-                                target_path: challengeData.target_path
-                            };
-                            
-                            resolve({
-                                powHeader: btoa(JSON.stringify(powResponse)),
-                                iterations: data.iterations,
-                                time: data.time
-                            });
-                            break;
-                            
-                        case 'error':
-                            updatePowStatus(`Mining error: ${data.error}`, 'error', 0);
-                            reject(new Error(data.error));
-                            break;
-                    }
-                };
+                // Use the unified solver
+                const result = await unifiedSolver.solve(
+                    challengeData.challenge,
+                    challengeData.salt,
+                    challengeData.difficulty,
+                    challengeData.signature
+                );
                 
-                // Start the worker
-                powWorker.postMessage({
+                updatePowStatus(
+                    `Solved! Answer: ${result.answer} (${result.iterations} iterations in ${result.time}ms)`,
+                    'success',
+                    100
+                );
+                
+                addDebugLog('PoW solved', result);
+                
+                // Construct PoW response header
+                const powResponse = {
+                    algorithm: challengeData.algorithm,
                     challenge: challengeData.challenge,
                     salt: challengeData.salt,
-                    difficulty: challengeData.difficulty,
-                    challengeSignature: challengeData.signature
-                });
-            });
-        }
-
-        // Replace your current session state variable with this object
-        let currentConversation = {
-            sessionId: null,      // The chat_session_id from createChatSession()
-            lastResponseId: null  // The response_message_id from the last AI reply
-        };
-
-        // Function to start a brand new conversation
-        async function startNewConversation() {
-            try {
-                const newSessionId = await createChatSession();
-                currentConversation = {
-                    sessionId: newSessionId,
-                    lastResponseId: null // This will be null for the first message
+                    answer: result.answer,
+                    signature: result.signature,
+                    target_path: challengeData.target_path
                 };
-                console.log('Started new conversation:', currentConversation);
-                return newSessionId;
+                
+                return {
+                    powHeader: btoa(JSON.stringify(powResponse)),
+                    iterations: result.iterations,
+                    time: result.time
+                };
+                
             } catch (error) {
-                console.error('Failed to start new conversation:', error);
+                updatePowStatus(`PoW solving error: ${error.message}`, 'error', 0);
                 throw error;
             }
         }
 
-        // Function to get the correct parent_message_id for the next request
-        function getParentMessageId() {
-            // For the first message, parent_message_id should be null
-            // For subsequent messages, use the last AI response ID
-            return currentConversation.lastResponseId;
-        }
-
-        // After receiving a streamed response, update the lastResponseId
-        function updateConversationWithResponse(responseMessageId) {
-            if (responseMessageId && responseMessageId > 0) {
-                currentConversation.lastResponseId = responseMessageId;
-                console.log('Updated last response ID to:', responseMessageId);
-            }
-        }
-
-        /**
-         * Creates a new chat session with DeepSeek.
-         * @returns {Promise<string>} - The new chat_session_id.
-         */
+        // Create chat session
         async function createChatSession() {
             const response = await fetch(CREATE_ENDPOINT, {
                 method: 'POST',
@@ -1101,16 +1364,45 @@
             }
 
             const data = await response.json();
-            // Navigate the nested response to get the session ID
             const sessionId = data.data?.biz_data?.id;
             if (!sessionId) {
                 throw new Error('Could not extract session ID from response');
             }
+            
             console.log('Created new chat session:', sessionId);
             return sessionId;
         }
 
-        // Send chat completion request with PoW header
+        // Start new conversation
+        async function startNewConversation() {
+            try {
+                const newSessionId = await createChatSession();
+                currentConversation = {
+                    sessionId: newSessionId,
+                    lastResponseId: null
+                };
+                console.log('Started new conversation:', currentConversation);
+                return newSessionId;
+            } catch (error) {
+                console.error('Failed to start new conversation:', error);
+                throw error;
+            }
+        }
+
+        // Get parent message ID
+        function getParentMessageId() {
+            return currentConversation.lastResponseId;
+        }
+
+        // Update conversation with response
+        function updateConversationWithResponse(responseMessageId) {
+            if (responseMessageId && responseMessageId > 0) {
+                currentConversation.lastResponseId = responseMessageId;
+                console.log('Updated last response ID to:', responseMessageId);
+            }
+        }
+
+        // Send chat completion request
         async function sendChatCompletion(message, powHeader) {
             updatePowStatus('Sending chat request...', 'info', 100);
             addDebugLog('Sending chat completion request');
@@ -1153,29 +1445,24 @@
                 throw new Error(`API error ${response.status}: ${errorText}`);
             }
 
-            // Check if response is streaming (Server-Sent Events)
+            // Handle streaming response
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('text/event-stream')) {
-                // Parse the SSE stream to get response_message_id
                 const { responseMessageId, fullResponse } = await parseStreamResponse(response);
                 updateConversationWithResponse(responseMessageId);
-
-                // Display fullResponse to user
                 return fullResponse;
             } else {
-                // Fallback for non-streaming (shouldn't happen with DeepSeek)
                 const data = await response.json();
                 addDebugLog('Non streaming response:', data);
                 return data;
-                // ... handle JSON response
             }
-            
         }
 
         // ==============================
         // MAIN REQUEST HANDLER
         // ==============================
 
+        // Update the sendRequest function to handle errors better
         async function sendRequest() {
             const message = messageInput.value.trim();
             if (!message) {
@@ -1186,11 +1473,13 @@
 
             // Prepare UI
             sendBtn.disabled = true;
+            const originalText = sendBtn.textContent;
             sendBtn.innerHTML = '<span class="spinner"></span> Processing...';
             responseDisplay.textContent = 'Working...';
             responseDisplay.className = '';
 
             try {
+                // Initialize conversation if needed
                 if (!currentConversation.sessionId) {
                     await startNewConversation();
                     showStatus('New chat session started', 'info');
@@ -1199,18 +1488,20 @@
                 // Step 1: Request PoW challenge
                 const challengeData = await requestPowChallenge();
                 
-                // Step 2: Solve PoW
-                const { powHeader, iterations, time } = await solvePowWithWorker(challengeData);
+                // Step 2: Solve PoW with WASM
+                const { powHeader, iterations, time } = await solvePowWithWasm(challengeData);
                 
                 // Step 3: Send chat completion
                 const result = await sendChatCompletion(message, powHeader);
                 
                 // Step 4: Display result
-                if (result.choices && result.choices.length > 0) {
+                if (typeof result === 'string') {
+                    // Already displayed by parseStreamResponse
+                    showStatus(`Success! PoW solved in ${time}ms (${iterations} iterations)`, 'success');
+                } else if (result.choices && result.choices.length > 0) {
                     const reply = result.choices[0].message.content;
                     responseDisplay.textContent = reply;
                     
-                    // Add token usage if available
                     if (result.usage) {
                         responseDisplay.textContent += `\n\n--- Token Usage ---\nPrompt: ${result.usage.prompt_tokens} | Completion: ${result.usage.completion_tokens} | Total: ${result.usage.total_tokens}`;
                     }
@@ -1226,11 +1517,11 @@
                 
             } catch (error) {
                 console.error('Request failed:', error);
-                responseDisplay.textContent = `Error: ${error.message}`;
+                responseDisplay.textContent = `Error: ${error.message}\n\nPlease check:\n1. WASM file is in the correct location\n2. Your proxy server is running\n3. Browser console for detailed errors`;
                 showStatus(`Error: ${error.message}`, 'error');
             } finally {
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Send Request';
+                sendBtn.textContent = originalText;
             }
         }
 
@@ -1277,7 +1568,7 @@
             }
         });
 
-        // Update URL display when custom URL changes
+        // Update URL display
         customUrlInput.addEventListener('input', function() {
             if (this.value.trim()) {
                 currentUrlDisplay.textContent = this.value;
@@ -1286,7 +1577,7 @@
             }
         });
 
-        // Get the current endpoint URL
+        // Get endpoint URL
         function getEndpointUrl() {
             if (apiUrlSelect.value === '' && customUrlInput.value.trim()) {
                 return customUrlInput.value.trim();
@@ -1301,14 +1592,8 @@
             powStatus.className = 'pow-status';
             debugInfo.innerHTML = 'Debug information will appear here...';
             
-            // Reset session for new conversation
+            // Reset conversation
             await startNewConversation();
-            
-            // Terminate existing worker
-            if (powWorker) {
-                powWorker.terminate();
-                powWorker = null;
-            }
             
             showStatus('New chat session started', 'info');
         }
@@ -1359,18 +1644,35 @@
         // INITIALIZATION
         // ==============================
 
+        // Update the initialization to handle WASM loading better
         window.addEventListener('DOMContentLoaded', () => {
             // Load token from URL hash if present
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
             
-            // Pre-fill with proxy URL for convenience
+            // Pre-fill with proxy URL
             customUrlInput.value = 'http://localhost:3000';
             
-            // Update URL display initially
+            // Update URL display
             currentUrlDisplay.textContent = getEndpointUrl();
             
             // Initialize config state
             initializeConfigState();
+            
+            // Pre-initialize solver
+            setTimeout(() => {
+                unifiedSolver.initialize()
+                    .then(initialized => {
+                        if (initialized) {
+                            showStatus('WASM PoW solver ready', 'success');
+                        } else {
+                            showStatus('Using JavaScript PoW solver', 'warning');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Solver initialization error:', error);
+                        showStatus(`Solver error: ${error.message}`, 'error');
+                    });
+            }, 500);
             
             // Show welcome message
             showStatus('Ready. Enter message to begin.', 'info');
