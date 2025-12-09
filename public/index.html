@@ -295,6 +295,8 @@
             padding: 0; /* Remove default padding for full-width look */
             background: var(--surface);
             overflow: hidden; /* Contain children */
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
         }
 
         .chat-header {
@@ -489,6 +491,13 @@
             color: var(--text-secondary);
             text-align: center;
             padding: 32px;
+        }
+
+        .input-card {
+            border-radius: 0.5rem;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            margin-top: 0;
         }
 
         .input-area {
@@ -842,7 +851,7 @@
             </div>
         </div>
 
-        <div class="card" style="margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-top: none;">
+        <div class="card input-card">
              <div class="input-group input-wrapper">
                 <textarea id="message" placeholder="Type your message here... (Ctrl+Enter to send)"></textarea>
                 <button id="sendBtn" class="send-icon-btn" title="Send Request">
