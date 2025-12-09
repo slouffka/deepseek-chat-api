@@ -1013,6 +1013,48 @@
                 appendMessage('assistant', '...');
             }
 
+            // Helper to extract text from DeepSeek's JSON-Diff format
+            function extractTextFromDiff(diff) {
+                if (!diff) return '';
+                let text = '';
+                
+                // Direct content property (e.g. inside a fragment object)
+                if (diff.content && typeof diff.content === 'string') {
+                    return diff.content;
+                }
+
+                // DeepSeek Diff Structure
+                if (diff.v !== undefined) {
+                    // Case: v is the text
+                    if (typeof diff.v === 'string') {
+                         // Heuristic: if path is present, ensure it's content
+                         if (diff.p && !diff.p.endsWith('content') && !diff.p.includes('fragments')) {
+                             return '';
+                         }
+                         return diff.v;
+                    }
+                    
+                    // Case: v is an array (BATCH or list append)
+                    if (Array.isArray(diff.v)) {
+                        for (const item of diff.v) {
+                            text += extractTextFromDiff(item);
+                        }
+                    }
+                    
+                    // Case: v is an object (nested update or new struct)
+                    if (typeof diff.v === 'object' && diff.v !== null) {
+                        text += extractTextFromDiff(diff.v);
+                    }
+                } else if (Array.isArray(diff)) {
+                    // Just an array of items
+                    for (const item of diff) {
+                        text += extractTextFromDiff(item);
+                    }
+                }
+                
+                return text;
+            }
+
             try {
                 while (true) {
                     const { done, value } = await reader.read();
@@ -1027,48 +1069,49 @@
                     buffer = lines.pop(); // Keep the last partial line for the next chunk
                     
                     for (const line of lines) {
+                        if (line.trim() === '') continue;
                         if (line.startsWith('data: ')) {
-                            const data = line.substring(6);
+                            const dataStr = line.substring(6);
                             
-                            if (data === '[DONE]') {
+                            if (dataStr === '[DONE]') {
                                 continue;
                             }
                             
                             try {
-                                const parsed = JSON.parse(data);
-                                
-                                // Extract response_message_id if available
-                                if (parsed.data?.biz_data?.response_message_id && !responseMessageId) {
-                                    responseMessageId = parsed.data.biz_data.response_message_id;
+                                const parsed = JSON.parse(dataStr);
+
+                                // 1. Handle "ready" event data
+                                if (parsed.response_message_id) {
+                                    responseMessageId = parsed.response_message_id;
                                     console.log('Found response_message_id:', responseMessageId);
+                                    continue;
+                                }
+
+                                // 2. Handle DeepSeek JSON-Diff format
+                                const extractedText = extractTextFromDiff(parsed);
+                                if (extractedText) {
+                                    fullResponse += extractedText;
+                                    updateLastAssistantMessage(fullResponse);
+                                    continue;
                                 }
                                 
-                                // Extract and display content
-                                const choices = parsed.data?.biz_data?.choices;
+                                // 3. Fallback for standard OpenAI format or existing logic
+                                const choices = parsed.choices || parsed.data?.biz_data?.choices;
                                 if (choices && choices[0]?.message?.content) {
                                     const content = choices[0].message.content;
                                     fullResponse += content;
                                     updateLastAssistantMessage(fullResponse);
+                                    continue;
                                 }
                                 
-                                // Show usage stats if available
-                                const usage = parsed.data?.biz_data?.usage;
+                                // Handle usage if available
+                                const usage = parsed.usage || parsed.data?.biz_data?.usage;
                                 if (usage) {
                                     updateLastAssistantMessage(fullResponse, usage);
                                 }
-                                
-                                // Handle errors in the stream
-                                if (parsed.data?.biz_data?.error) {
-                                    console.error('Stream error:', parsed.data.biz_data.error);
-                                    throw new Error(parsed.data.biz_data.error);
-                                }
-                                
+
                             } catch (e) {
-                                // If it's not JSON, it might be part of the content
-                                if (data.trim() && data !== '[DONE]') {
-                                    fullResponse += data;
-                                    updateLastAssistantMessage(fullResponse);
-                                }
+                                // console.error('Error parsing JSON chunk', e);
                             }
                         }
                     }

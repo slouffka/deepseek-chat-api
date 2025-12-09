@@ -79,7 +79,6 @@ app.post('/api/v0/:service/:endpoint', async (req, res) => {
             
             if (response.body) {
                 const reader = response.body.getReader();
-                const encoder = new TextEncoder();
                 
                 try {
                     while (true) {
@@ -87,7 +86,7 @@ app.post('/api/v0/:service/:endpoint', async (req, res) => {
                         if (done) break;
                         
                         // Write the chunk to response
-                        res.write(encoder.encode(value));
+                        res.write(value);
                     }
                 } finally {
                     reader.releaseLock();
