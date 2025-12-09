@@ -8,6 +8,7 @@
         :root {
             --primary: #007AFF;
             --surface: #FFFFFF;
+            --background: #F2F2F7;
             --border: #E5E5EA;
             --text-primary: #1D1D1F;
             --text-secondary: #8E8E93;
@@ -23,6 +24,19 @@
             --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
         }
 
+        [data-theme="dark"] {
+            --primary: #0A84FF;
+            --surface: #1C1C1E;
+            --background: #000000;
+            --border: #38383A;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --text-tertiary: #48484A;
+            --success: #30D158;
+            --warning: #FF9F0A;
+            --error: #FF453A;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -35,13 +49,14 @@
             font-family: var(--font-ui);
             color: var(--text-primary);
             line-height: 1.4;
-            background: #F2F2F7;
+            background: var(--background);
             padding: var(--spacing);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             max-width: 640px;
             margin: 0 auto;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .container {
@@ -74,7 +89,7 @@
             font-size: 13px;
         }
 
-        .config-toggle {
+        .icon-btn {
             background: none;
             border: none;
             padding: 8px;
@@ -87,8 +102,8 @@
             justify-content: center;
         }
 
-        .config-toggle:hover {
-            background: rgba(0, 0, 0, 0.05);
+        .icon-btn:hover {
+            background: rgba(125, 125, 125, 0.1);
             color: var(--text-primary);
         }
 
@@ -153,7 +168,13 @@
             font-family: var(--font-ui);
             font-size: 15px;
             background: var(--surface);
-            transition: border-color 0.2s;
+            color: var(--text-primary);
+            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 1;
         }
 
         input:focus, textarea:focus, select:focus {
@@ -173,7 +194,7 @@
             font-family: var(--font-mono);
             font-size: 11px;
             color: var(--text-secondary);
-            background: #F8F8F8;
+            background: rgba(125, 125, 125, 0.1);
             padding: 8px 10px;
             border-radius: 6px;
             margin-top: 6px;
@@ -216,14 +237,25 @@
             cursor: not-allowed;
         }
 
+        .btn-stop {
+            background: var(--error);
+            color: white;
+            padding: 10px;
+            width: 44px; /* Square-ish */
+        }
+        
+        .btn-stop:hover {
+            background: #D32F2F;
+        }
+
         .btn-secondary {
-            background: #F2F2F7;
+            background: rgba(125, 125, 125, 0.1);
             color: var(--text-primary);
             border: 1px solid var(--border);
         }
 
         .btn-secondary:hover {
-            background: #E5E5EA;
+            background: rgba(125, 125, 125, 0.2);
         }
 
         .btn-warning {
@@ -274,7 +306,7 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
-            background: #F9F9FB;
+            background: rgba(125, 125, 125, 0.05);
         }
 
         .chat-message {
@@ -300,7 +332,54 @@
             color: var(--text-primary);
             border: 1px solid var(--border);
             border-bottom-left-radius: 2px;
-            font-family: var(--font-mono); /* Keep code look for assistant */
+            font-family: var(--font-ui);
+        }
+
+        /* Thinking Block Styles */
+        .thinking-block {
+            margin-bottom: 12px;
+            border-left: 3px solid var(--border);
+            padding-left: 14px;
+            background: linear-gradient(to right, rgba(125,125,125,0.05), transparent);
+            border-radius: 4px;
+            padding: 8px 8px 8px 14px;
+        }
+
+        .thinking-block details > summary {
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            user-select: none;
+            list-style: none; /* Hide default triangle */
+        }
+        
+        .thinking-block details > summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        .thinking-block details > summary::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 6px;
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .thinking-block details[open] > summary::before {
+            transform: rotate(90deg);
+        }
+
+        .thinking-content {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            background: rgba(125, 125, 125, 0.05);
+            padding: 8px;
+            border-radius: 6px;
         }
 
         .message-role-label {
@@ -392,10 +471,10 @@
             gap: 6px;
             margin-top: 6px;
             padding: 8px;
-            background: #FFF3E0;
+            background: rgba(255, 149, 0, 0.1);
             border-radius: 6px;
             font-size: 11px;
-            color: #E65100;
+            color: var(--warning);
         }
 
         .gear-icon {
@@ -412,7 +491,7 @@
             font-family: var(--font-mono);
             font-size: 11px;
             color: var(--text-secondary);
-            background: #F8F8F8;
+            background: rgba(125, 125, 125, 0.1);
             padding: 10px;
             border-radius: 6px;
             margin-top: 8px;
@@ -425,7 +504,7 @@
             margin-top: 8px;
             font-size: 12px;
             font-family: var(--font-mono);
-            background: #F0F7FF;
+            background: rgba(0, 122, 255, 0.1);
             border-left: 3px solid var(--primary);
             display: none;
         }
@@ -435,17 +514,17 @@
         }
 
         .pow-status.mining {
-            background: #FFF7E6;
+            background: rgba(255, 149, 0, 0.1);
             border-left-color: var(--warning);
         }
 
         .pow-status.success {
-            background: #F0FFF4;
+            background: rgba(52, 199, 89, 0.1);
             border-left-color: var(--success);
         }
 
         .pow-status.error {
-            background: #FFF0F0;
+            background: rgba(255, 59, 48, 0.1);
             border-left-color: var(--error);
         }
 
@@ -496,7 +575,7 @@
             font-family: var(--font-mono);
             font-size: 10px;
             color: var(--text-secondary);
-            background: #F8F8F8;
+            background: rgba(125, 125, 125, 0.1);
             padding: 10px;
             border-radius: 6px;
             margin-top: 8px;
@@ -528,12 +607,20 @@
                 <h1>DeepSeek Chat API</h1>
                 <p class="subtitle">Proof-of-Work enabled interface</p>
             </div>
-            <button class="config-toggle" id="configToggle" title="Toggle configuration">
-                <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-            </button>
+            <div style="display: flex; gap: 8px;">
+                <button class="icon-btn" id="themeToggle" title="Toggle dark mode">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                    </svg>
+                </button>
+                <button class="icon-btn config-toggle" id="configToggle" title="Toggle configuration">
+                    <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
         </header>
 
         <div class="card config-card" id="configCard">
@@ -839,10 +926,28 @@
         // Application state
         let configExpanded = localStorage.getItem('configExpanded') !== 'false';
         let debugEnabled = false;
+        let currentController = null; // For aborting requests
         let currentConversation = {
             sessionId: null,
             lastResponseId: null
         };
+        
+        // Theme Management
+        const themeToggle = document.getElementById('themeToggle');
+        let isDarkMode = localStorage.getItem('theme') === 'dark';
+        
+        function updateTheme() {
+            document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            updateTheme();
+        });
+        
+        // Init theme
+        updateTheme();
         
         // Chat History Management
         let messages = [];
@@ -883,8 +988,12 @@
                 
                 // Content
                 const contentDiv = document.createElement('div');
-                contentDiv.textContent = msg.content;
-                contentDiv.style.whiteSpace = 'pre-wrap';
+                if (msg.role === 'assistant' && msg.isHtml) {
+                     contentDiv.innerHTML = msg.content;
+                } else {
+                     contentDiv.textContent = msg.content;
+                     contentDiv.style.whiteSpace = 'pre-wrap';
+                }
                 wrapper.appendChild(contentDiv);
 
                 // Usage stats for assistant if available
@@ -908,24 +1017,84 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        function appendMessage(role, content) {
-            const msg = { role, content, timestamp: Date.now() };
+        function appendMessage(role, content, isHtml = false) {
+            const msg = { role, content, timestamp: Date.now(), isHtml };
             messages.push(msg);
             saveMessages();
             renderMessages();
             return msg;
         }
 
-        function updateLastAssistantMessage(content, usage = null) {
+        function updateLastAssistantMessage(content, usage = null, isHtml = false, skipRender = false) {
             const lastMsg = messages[messages.length - 1];
             if (lastMsg && lastMsg.role === 'assistant') {
                 lastMsg.content = content;
+                if (isHtml !== undefined) lastMsg.isHtml = isHtml;
                 if (usage) lastMsg.usage = usage;
-                saveMessages();
-                renderMessages();
+                
+                if (!skipRender) {
+                    saveMessages();
+                    renderMessages();
+                }
             } else {
-                appendMessage('assistant', content);
+                appendMessage('assistant', content, isHtml);
             }
+        }
+
+        // Smart DOM update for streaming to preserve interactivity (e.g. details open state)
+        function updateStreamingDOM(html, usage) {
+            try {
+                const history = document.getElementById('chatHistory');
+                // Get all chat messages and find the last one
+                const messages = history.querySelectorAll('.chat-message');
+                const lastMessage = messages[messages.length - 1];
+                
+                // Ensure we are updating the last assistant message
+                if (!lastMessage || !lastMessage.classList.contains('assistant')) return;
+                
+                // The content div is the first child of the message wrapper
+                const contentDiv = lastMessage.firstElementChild;
+                if (!contentDiv) return;
+
+                // 1. Preserve <details> state
+                const existingDetails = contentDiv.querySelector('details');
+                const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : false;
+
+                // 2. Update content
+                contentDiv.innerHTML = html;
+
+                // 3. Restore <details> state
+                if (wasOpen) {
+                    const newDetails = contentDiv.querySelector('details');
+                    if (newDetails) newDetails.setAttribute('open', '');
+                }
+
+                // 4. Update usage if provided
+                if (usage) {
+                    let usageDiv = lastMessage.querySelector('.token-usage');
+                    if (!usageDiv) {
+                        usageDiv = document.createElement('div');
+                        usageDiv.className = 'token-usage';
+                        lastMessage.appendChild(usageDiv);
+                    }
+                    usageDiv.textContent = `Tokens: ${usage.total_tokens} (${usage.prompt_tokens} + ${usage.completion_tokens})`;
+                }
+
+                // 5. Scroll to bottom (optional, but good for streaming)
+                history.scrollTop = history.scrollHeight;
+            } catch (e) {
+                console.error('Error in updateStreamingDOM:', e);
+            }
+        }
+        
+        function escapeHtml(unsafe) {
+            if (!unsafe) return "";
+            return unsafe
+                 .replace(/&/g, "&")
+                 .replace(/</g, "<")
+                 .replace(/>/g, ">")
+                 .replace(/"/g, "\"")
+                 .replace(/'/g, "&#039;");
         }
 
         // Generate client_stream_id
@@ -1004,55 +1173,174 @@
         async function parseStreamResponse(response) {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let fullResponse = '';
             let responseMessageId = null;
             let buffer = '';
             
+            // State for DeepSeek Diff Parser
+            const messageState = {
+                fragments: [], // Array to hold content fragments in order
+                fragmentMap: {} // Map id to index for robust updates
+            };
+            
             // Create a placeholder message if needed
             if (messages.length === 0 || messages[messages.length-1].role !== 'assistant') {
-                appendMessage('assistant', '...');
+                appendMessage('assistant', '...'); // Initial placeholder
             }
+            
+            // Helper to update the state from a Diff
+            function processDeepSeekDiff(diff, state, parentPath = '') {
+                try {
+                    if (!diff) return;
+                    
+                    // Calculate current path including parent context
+                    let currentPath = parentPath;
+                    if (diff.p) {
+                        if (currentPath && !currentPath.endsWith('/')) currentPath += '/';
+                        currentPath += diff.p;
+                    }
 
-            // Helper to extract text from DeepSeek's JSON-Diff format
-            function extractTextFromDiff(diff) {
-                if (!diff) return '';
-                let text = '';
-                
-                // Direct content property (e.g. inside a fragment object)
-                if (diff.content && typeof diff.content === 'string') {
-                    return diff.content;
-                }
-
-                // DeepSeek Diff Structure
-                if (diff.v !== undefined) {
-                    // Case: v is the text
-                    if (typeof diff.v === 'string') {
-                         // Heuristic: if path is present, ensure it's content
-                         if (diff.p && !diff.p.endsWith('content') && !diff.p.includes('fragments')) {
-                             return '';
-                         }
-                         return diff.v;
+                    // Handle BATCH (array of diffs in v)
+                    if (diff.o === 'BATCH' || (diff.o === undefined && Array.isArray(diff.v) && diff.p === undefined)) {
+                        if (Array.isArray(diff.v)) {
+                            // Pass currentPath as parentPath to children
+                            diff.v.forEach(item => processDeepSeekDiff(item, state, currentPath));
+                        }
+                        return;
                     }
                     
-                    // Case: v is an array (BATCH or list append)
-                    if (Array.isArray(diff.v)) {
-                        for (const item of diff.v) {
-                            text += extractTextFromDiff(item);
+                    // Path handling (Normalize)
+                    let path = currentPath;
+                    if (path.startsWith('response/')) path = path.replace('response/', '');
+                    if (path === 'response') path = '';
+                    if (path.startsWith('/')) path = path.substring(1);
+                    
+                    // 1. Fragments Append (New Fragment)
+                    // Relaxed check: match 'fragments' or '.../fragments'
+                    if ((path === 'fragments' || path.endsWith('/fragments')) && diff.o === 'APPEND') {
+                        const items = Array.isArray(diff.v) ? diff.v : [diff.v];
+                        items.forEach(item => {
+                            const newFragment = {
+                                type: item.type || 'TEXT', // THINK or TEXT/RESPONSE
+                                content: item.content || '',
+                                id: item.id
+                            };
+                            state.fragments.push(newFragment);
+                            // Map the fragment ID (if present) to its index
+                            if (item.id !== undefined) {
+                                state.fragmentMap[item.id] = state.fragments.length - 1;
+                            }
+                            addDebugLog('Fragment created', newFragment);
+                        });
+                        return;
+                    }
+                    
+                    // 2. Fragment Content Update via Index
+                    // Path format: fragments/0/content
+                    const contentMatch = path.match(/fragments\/(\d+)\/content$/);
+                    if (contentMatch) {
+                        const index = parseInt(contentMatch[1]);
+                        
+                        // Auto-create fragment if missing (Self-Healing)
+                        if (!state.fragments[index]) {
+                            if (index === state.fragments.length) {
+                                // Assume it's a generic text fragment if not specified
+                                const newFragment = { type: 'TEXT', content: '', id: null };
+                                state.fragments.push(newFragment);
+                                addDebugLog(`Auto-created missing fragment ${index}`, newFragment);
+                            } else {
+                                // Try to recover by creating intermediate fragments?
+                                // For now, just log warning and create it anyway to avoid stalling
+                                const newFragment = { type: 'TEXT', content: '', id: null };
+                                // Fill gaps
+                                while(state.fragments.length < index) {
+                                     state.fragments.push({ type: 'TEXT', content: '(missing)', id: null });
+                                }
+                                state.fragments.push(newFragment);
+                                addDebugLog(`Force-created missing fragment ${index}`);
+                            }
+                        }
+
+                        if (state.fragments[index]) {
+                            state.fragments[index].content += diff.v;
+                        }
+                        return;
+                    }
+
+                    // 3. Fragment Type Update
+                    const typeMatch = path.match(/fragments\/(\d+)\/type$/);
+                    if (typeMatch) {
+                        const index = parseInt(typeMatch[1]);
+                        if (state.fragments[index]) {
+                            state.fragments[index].type = diff.v;
+                        }
+                        return;
+                    }
+                    
+                    // 3b. Missing 'content' or 'response/content' handler?
+                    // Let's add it in case the backend sends mixed formats.
+                    // This matches "content" or "response/content" (normalized to "content")
+                    if (path === 'content' && typeof diff.v === 'string') {
+                        // Find the last TEXT fragment or create one
+                        let lastFragment = state.fragments[state.fragments.length - 1];
+                        if (!lastFragment || lastFragment.type !== 'TEXT') {
+                            lastFragment = { type: 'TEXT', content: '', id: 'main' };
+                            state.fragments.push(lastFragment);
+                            addDebugLog('Created main TEXT fragment');
+                        }
+                        lastFragment.content += diff.v;
+                        return;
+                    }
+
+                    // 4. Main Content Update (Non-fragment)
+                    // Matches "content" or "response/content" (normalized to "content")
+                    if (path === 'content' && typeof diff.v === 'string') {
+                        // Find the last TEXT fragment or create one
+                        let lastFragment = state.fragments[state.fragments.length - 1];
+                        if (!lastFragment || lastFragment.type !== 'TEXT') {
+                            lastFragment = { type: 'TEXT', content: '', id: 'main' };
+                            state.fragments.push(lastFragment);
+                            addDebugLog('Created main TEXT fragment');
+                        }
+                        lastFragment.content += diff.v;
+                        return;
+                    }
+                    
+                    // 5. Fallback: Recursively search for 'content' in diff.v if it's an object/array
+                    if (typeof diff.v === 'object' && diff.v !== null) {
+                        if (Array.isArray(diff.v)) {
+                            diff.v.forEach(item => processDeepSeekDiff(item, state, currentPath));
+                        } else {
+                            processDeepSeekDiff(diff.v, state, currentPath);
+                        }
+                    } else {
+                        // Log unhandled diffs that might contain text
+                        if (typeof diff.v === 'string' && diff.v.length > 0) {
+                            addDebugLog(`Unhandled diff path: ${path}`, diff.v);
                         }
                     }
-                    
-                    // Case: v is an object (nested update or new struct)
-                    if (typeof diff.v === 'object' && diff.v !== null) {
-                        text += extractTextFromDiff(diff.v);
-                    }
-                } else if (Array.isArray(diff)) {
-                    // Just an array of items
-                    for (const item of diff) {
-                        text += extractTextFromDiff(item);
-                    }
+                } catch (e) {
+                    console.error('Error in processDeepSeekDiff:', e, diff);
+                    addDebugLog('Error in processDeepSeekDiff', e.message);
                 }
+            }
+            
+            // Helper to render current state to HTML
+            function renderStateToHtml(state) {
+                if (state.fragments.length === 0) return '';
                 
-                return text;
+                return state.fragments.map(f => {
+                    const safeContent = escapeHtml(f.content);
+                    if (f.type === 'THINK') {
+                        // Thinking block
+                        return `<div class="thinking-block"><details open><summary>Thinking Process</summary><div class="thinking-content">${safeContent}</div></details></div>`;
+                    } else if (f.type === 'RESPONSE' || f.type === 'TEXT') {
+                        // Main response
+                        return safeContent;
+                    } else {
+                        // Fallback
+                        return safeContent;
+                    }
+                }).join('');
             }
 
             try {
@@ -1060,68 +1348,108 @@
                     const { done, value } = await reader.read();
                     if (done) break;
                     
-                    // Convert the Uint8Array to text
                     const chunk = decoder.decode(value, { stream: true });
                     buffer += chunk;
                     
-                    // Parse Server-Sent Events (SSE) format
                     const lines = buffer.split('\n');
-                    buffer = lines.pop(); // Keep the last partial line for the next chunk
+                    buffer = lines.pop();
                     
                     for (const line of lines) {
                         if (line.trim() === '') continue;
                         if (line.startsWith('data: ')) {
                             const dataStr = line.substring(6);
-                            
-                            if (dataStr === '[DONE]') {
-                                continue;
-                            }
+                            if (dataStr === '[DONE]') continue;
                             
                             try {
                                 const parsed = JSON.parse(dataStr);
 
-                                // 1. Handle "ready" event data
+                                // Special handling for "v" as a direct property (top-level diff)
+                                // The log shows: data: {"v": "mm", "p": "response/fragments/0/content", "o": "APPEND"}
+                                // AND data: {"v": "..."} which are continuations
+                                
                                 if (parsed.response_message_id) {
                                     responseMessageId = parsed.response_message_id;
-                                    console.log('Found response_message_id:', responseMessageId);
                                     continue;
                                 }
 
-                                // 2. Handle DeepSeek JSON-Diff format
-                                const extractedText = extractTextFromDiff(parsed);
-                                if (extractedText) {
-                                    fullResponse += extractedText;
-                                    updateLastAssistantMessage(fullResponse);
-                                    continue;
-                                }
-                                
-                                // 3. Fallback for standard OpenAI format or existing logic
+                                // Handle Standard OpenAI Format (fallback)
                                 const choices = parsed.choices || parsed.data?.biz_data?.choices;
                                 if (choices && choices[0]?.message?.content) {
+                                    // Treat as a generic TEXT fragment
+                                    if (messageState.fragments.length === 0) {
+                                        messageState.fragments.push({ type: 'TEXT', content: '', id: null });
+                                    }
                                     const content = choices[0].message.content;
-                                    fullResponse += content;
-                                    updateLastAssistantMessage(fullResponse);
+                                    messageState.fragments[messageState.fragments.length-1].content += content;
+                                    
+                                    const html = renderStateToHtml(messageState);
+                                    updateLastAssistantMessage(html, null, true, true);
+                                    updateStreamingDOM(html, null);
                                     continue;
                                 }
-                                
-                                // Handle usage if available
-                                const usage = parsed.usage || parsed.data?.biz_data?.usage;
-                                if (usage) {
-                                    updateLastAssistantMessage(fullResponse, usage);
+
+                                // Handle DeepSeek JSON-Diff
+                                try {
+                                    // If the object has 'v' but no 'p' and no 'choices', it might be a direct content append
+                                    // to the last active fragment (implicit context).
+                                    // See log line 15: data: {"v": ","} -> No path!
+                                    
+                                    if (parsed.v !== undefined && parsed.p === undefined && parsed.o === undefined && !parsed.response) {
+                                        // Implicit append to last fragment?
+                                        // Or maybe it is a "TEXT" fragment if none exists?
+                                        
+                                        // But wait, line 13: {"v": "mm", "p": "response/fragments/0/content", "o": "APPEND"}
+                                        // This sets context.
+                                        
+                                        // If we receive just {v: "text"}, where does it go?
+                                        // Log line 13 sets p=".../content".
+                                        // Log line 15 is just {v: ","}.
+                                        // Hypothesis: It appends to the SAME path as the previous diff if 'p' is missing?
+                                        // OR, it defaults to appending to the last modified fragment?
+                                        
+                                        // Let's try appending to the last fragment if it exists.
+                                        const lastFrag = messageState.fragments[messageState.fragments.length - 1];
+                                        if (lastFrag) {
+                                            lastFrag.content += parsed.v;
+                                            
+                                            const html = renderStateToHtml(messageState);
+                                            updateLastAssistantMessage(html, null, true, true);
+                                            updateStreamingDOM(html, null);
+                                            continue; // handled
+                                        }
+                                    }
+
+                                    processDeepSeekDiff(parsed, messageState);
+                                    
+                                    const html = renderStateToHtml(messageState);
+                                    const usage = parsed.usage || parsed.data?.biz_data?.usage;
+
+                                    if (messageState.fragments.length > 0) {
+                                        updateLastAssistantMessage(html, usage, true, true);
+                                        updateStreamingDOM(html, usage);
+                                    }
+                                } catch (diffError) {
+                                    console.error('Error processing diff:', diffError, parsed);
+                                    addDebugLog('Error processing diff', diffError.message);
                                 }
 
                             } catch (e) {
-                                // console.error('Error parsing JSON chunk', e);
+                                console.error('Error parsing JSON chunk', e, dataStr.substring(0, 100));
                             }
                         }
                     }
                 }
             } catch (error) {
-                console.error('Stream reading error:', error);
-                // Don't throw here - we might have partial content
+                if (error.name === 'AbortError') {
+                    console.log('Stream aborted');
+                    appendMessage('system', 'Generation stopped by user.');
+                } else {
+                    console.error('Stream reading error:', error);
+                }
             }
             
-            return { responseMessageId, fullResponse };
+            saveMessages(); // Final save
+            return { responseMessageId, fullResponse: renderStateToHtml(messageState) };
         }
 
         // ==============================
@@ -1294,7 +1622,10 @@
             };
             
             addDebugLog('Request payload', requestPayload);
-            addDebugLog('PoW header (decoded)', JSON.parse(atob(powHeader)));
+            
+            // Create AbortController
+            currentController = new AbortController();
+            const signal = currentController.signal;
             
             const response = await fetch(COMPLETION_ENDPOINT, {
                 method: 'POST',
@@ -1310,7 +1641,8 @@
                     'Referer': 'https://chat.deepseek.com/',
                     'Origin': 'https://chat.deepseek.com'
                 },
-                body: JSON.stringify(requestPayload)
+                body: JSON.stringify(requestPayload),
+                signal: signal
             });
             
             addDebugLog('Response status', response.status);
@@ -1335,6 +1667,17 @@
         }
 
         async function sendRequest() {
+            // Check if we are currently generating (Stop button logic)
+            if (currentController) {
+                currentController.abort();
+                currentController = null;
+                sendBtn.innerHTML = 'Send Request';
+                sendBtn.classList.remove('btn-stop');
+                sendBtn.classList.add('btn-primary');
+                showStatus('Request stopped', 'info');
+                return;
+            }
+            
             const message = messageInput.value.trim();
             if (!message) {
                 showStatus('Please enter a message', 'error');
@@ -1342,10 +1685,17 @@
                 return;
             }
 
-            // Prepare UI
-            sendBtn.disabled = true;
-            const originalText = sendBtn.textContent;
-            sendBtn.innerHTML = '<span class="spinner"></span> Processing...';
+            // Prepare UI for Sending
+            sendBtn.classList.remove('btn-primary');
+            sendBtn.classList.add('btn-stop');
+            sendBtn.innerHTML = '<div class="spinner"></div>'; // Compact spinner/stop
+            // Ideally we want a square stop icon, but for now spinner is feedback.
+            // Requirement: "Make the button square/icon-only to save space (remove "Send" text)."
+            // And "Clicking Stop should abort".
+            
+            // Let's make it a Stop Square
+            sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
+            sendBtn.title = "Stop Generating";
 
             try {
                 // Add user message to history
@@ -1373,7 +1723,7 @@
                     showStatus(`Success! PoW solved`, 'success');
                 } else if (result.choices && result.choices.length > 0) {
                     const reply = result.choices[0].message.content;
-                    updateLastAssistantMessage(reply, result.usage);
+                    updateLastAssistantMessage(reply, result.usage, false); // Assuming plain text fallback
                     
                     showStatus(`Success!`, 'success');
                 } else if (result.message || result.content) {
@@ -1385,13 +1735,21 @@
                 }
                 
             } catch (error) {
-                console.error('Request failed:', error);
-                // Add error message to chat
-                appendMessage('assistant', `Error: ${error.message}`);
-                showStatus(`Error: ${error.message}`, 'error');
+                if (error.name === 'AbortError') {
+                    // Handled in parseStreamResponse usually, but if it happens before stream
+                    showStatus('Request stopped', 'info');
+                } else {
+                    console.error('Request failed:', error);
+                    appendMessage('assistant', `Error: ${error.message}`);
+                    showStatus(`Error: ${error.message}`, 'error');
+                }
             } finally {
-                sendBtn.disabled = false;
-                sendBtn.textContent = originalText;
+                // Reset UI
+                sendBtn.classList.remove('btn-stop');
+                sendBtn.classList.add('btn-primary');
+                sendBtn.innerHTML = 'Send Request';
+                sendBtn.title = "Send Request";
+                currentController = null;
             }
         }
 
