@@ -426,38 +426,6 @@
             border-top: 1px solid var(--border);
         }
 
-        .status-bar {
-            position: fixed;
-            bottom: var(--spacing);
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 16px;
-            border-radius: var(--radius);
-            font-size: 13px;
-            display: none;
-            z-index: 1000;
-            max-width: 90%;
-            text-align: center;
-        }
-
-        .status-bar.visible {
-            display: block;
-            animation: fadeInUp 0.3s ease;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-
         .info-text {
             font-size: 11px;
             color: var(--text-secondary);
@@ -694,8 +662,6 @@
         </div>
     </div>
 
-    <div class="status-bar" id="statusBar"></div>
-
     <!-- Web Worker code will be created from Blob -->
 
     <script>
@@ -910,7 +876,6 @@
         const sendBtn = document.getElementById('sendBtn');
         const clearBtn = document.getElementById('clearBtn');
         const chatHistory = document.getElementById('chatHistory');
-        const statusBar = document.getElementById('statusBar');
         const powStatus = document.getElementById('powStatus');
         const powMessage = document.getElementById('powMessage');
         const powProgress = document.getElementById('powProgress');
@@ -1056,17 +1021,66 @@
                 const contentDiv = lastMessage.firstElementChild;
                 if (!contentDiv) return;
 
-                // 1. Preserve <details> state
-                const existingDetails = contentDiv.querySelector('details');
-                const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : false;
+                // Create temp element to parse new HTML and compare structure
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
 
-                // 2. Update content
-                contentDiv.innerHTML = html;
+                // Check for thinking block in new content and existing content
+                const newThinkingDetails = tempDiv.querySelector('.thinking-block details');
+                const currentThinkingDetails = contentDiv.querySelector('.thinking-block details');
 
-                // 3. Restore <details> state
-                if (wasOpen) {
-                    const newDetails = contentDiv.querySelector('details');
-                    if (newDetails) newDetails.setAttribute('open', '');
+                if (newThinkingDetails && currentThinkingDetails) {
+                    // OPTIMIZED UPDATE: Update children only to preserve wrapper state (open/closed)
+                    
+                    // 1. Update Thinking Content
+                    const newContent = newThinkingDetails.querySelector('.thinking-content');
+                    const currentContent = currentThinkingDetails.querySelector('.thinking-content');
+                    
+                    if (newContent && currentContent && newContent.innerHTML !== currentContent.innerHTML) {
+                        currentContent.innerHTML = newContent.innerHTML;
+                    }
+                    
+                    // 2. Update the rest of the message (The actual response)
+                    // Remove the thinking block from tempDiv so only the "Rest" remains
+                    const newThinkingBlock = tempDiv.querySelector('.thinking-block');
+                    if (newThinkingBlock) newThinkingBlock.remove();
+                    
+                    // Identify the current thinking block wrapper
+                    const currentThinkingBlock = contentDiv.querySelector('.thinking-block');
+                    
+                    // Remove everything from contentDiv EXCEPT the thinking block
+                    const nodesToRemove = [];
+                    contentDiv.childNodes.forEach(node => {
+                        if (node !== currentThinkingBlock) {
+                            nodesToRemove.push(node);
+                        }
+                    });
+                    nodesToRemove.forEach(n => n.remove());
+                    
+                    // Append new content from tempDiv (which now only has the response part)
+                    while (tempDiv.firstChild) {
+                        contentDiv.appendChild(tempDiv.firstChild);
+                    }
+                    
+                } else {
+                    // FALLBACK: Full update (for first render or if structure changes)
+                    
+                    // 1. Preserve <details> state if it exists
+                    const existingDetails = contentDiv.querySelector('details');
+                    const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : false;
+
+                    // 2. Update content
+                    contentDiv.innerHTML = html;
+
+                    // 3. Restore <details> state
+                    // If it was open, force it open.
+                    // Note: renderStateToHtml usually adds 'open' by default, so this mostly handles
+                    // keeping it open if we somehow rendered it closed, OR more importantly,
+                    // if we wanted to preserve a user's specific state (though full render resets selection).
+                    if (wasOpen) {
+                        const newDetails = contentDiv.querySelector('details');
+                        if (newDetails) newDetails.setAttribute('open', '');
+                    }
                 }
 
                 // 4. Update usage if provided
@@ -1114,24 +1128,23 @@
             return `${datePart}-${randomPart}`;
         }
 
-        // Show status message
+        // Show status message (reuses PoW status area)
         function showStatus(message, type = 'info') {
-            statusBar.textContent = message;
-            statusBar.className = 'status-bar visible';
+            // Map generic status to PoW status format
+            let progress = 0;
+            if (type === 'success') progress = 100;
             
-            if (type === 'error') {
-                statusBar.style.background = 'rgba(255, 59, 48, 0.9)';
-            } else if (type === 'success') {
-                statusBar.style.background = 'rgba(52, 199, 89, 0.9)';
-            } else if (type === 'warning') {
-                statusBar.style.background = 'rgba(255, 149, 0, 0.9)';
-            } else {
-                statusBar.style.background = 'rgba(0, 0, 0, 0.8)';
+            updatePowStatus(message, type, progress);
+            
+            // Auto-hide after delay for non-mining events
+            if (type !== 'mining') {
+                setTimeout(() => {
+                    // Only hide if the message hasn't changed (simple check)
+                    if (powMessage.textContent === message) {
+                        powStatus.classList.remove('active');
+                    }
+                }, 3000);
             }
-            
-            setTimeout(() => {
-                statusBar.classList.remove('visible');
-            }, 3000);
         }
 
         // Update PoW status display
@@ -1141,8 +1154,11 @@
             powProgress.className = 'progress-fill';
             powProgress.style.width = progress + '%';
             
+            // Handle mining animation
             if (type === 'mining') {
                 powProgress.classList.add('mining');
+            } else {
+                powProgress.classList.remove('mining');
             }
         }
 
@@ -1720,7 +1736,7 @@
                 // Step 4: Display result
                 if (typeof result === 'string') {
                     // Already displayed by parseStreamResponse
-                    showStatus(`Success! PoW solved`, 'success');
+                    showStatus('Message received', 'success');
                 } else if (result.choices && result.choices.length > 0) {
                     const reply = result.choices[0].message.content;
                     updateLastAssistantMessage(reply, result.usage, false); // Assuming plain text fallback
@@ -1896,19 +1912,15 @@
                 powSolver.initialize('sha3_wasm_bg.7b9ca65ddd.wasm')
                     .then(initialized => {
                         if (initialized) {
-                            showStatus('WASM PoW solver ready', 'success');
+                            console.log('WASM PoW solver ready');
                         } else {
-                            showStatus('WASM solver failed to load', 'warning');
+                            console.warn('WASM solver failed to load');
                         }
                     })
                     .catch(error => {
                         console.error('WASM pre-load error:', error);
-                        showStatus(`WASM error: ${error.message}`, 'error');
                     });
             }, 500);
-            
-            // Show welcome message
-            showStatus('Ready. Enter message to begin.', 'info');
         });
     </script>
 </body>
