@@ -571,15 +571,15 @@
 
         #message {
             padding-right: 46px;
-            min-height: 46px;
-            max-height: 200px;
+            min-height: 48px;
+            max-height: 120px;
             overflow-y: auto;
         }
 
         .send-icon-btn {
             position: absolute;
-            bottom: 8px;
-            right: 8px;
+            bottom: 0.5rem;
+            right: 0.5rem;
             background: var(--primary);
             color: white;
             border-radius: 8px;
@@ -2057,7 +2057,9 @@
         // Auto-resize textarea
         messageInput.addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+            // Set height to scrollHeight + 2px (for border) to prevent shrinkage/growth loops
+            // CSS max-height (120px) will constrain the visual height and enable scrolling
+            this.style.height = (this.scrollHeight + 2) + 'px';
         });
 
         // Example messages on double-click
