@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 dotenv.config();
 
@@ -13,17 +15,18 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 app.use(cors());
 app.use(express.json());
 
-// Debug middleware - captures all API requests
-app.use((req, _res, next) => {
-    if (req.path.includes('/api/v0/')) {
-        console.log('\n=== INCOMING REQUEST ===');
-        console.log('Path:', req.path);
-        console.log('Method:', req.method);
-        console.log('Body:', req.body);
-        console.log('=== END REQUEST ===\n');
-    }
-    next();
+// Serve index.html with PORT injected (before static middleware)
+app.get('/', (_req, res) => {
+    const html = readFileSync(join(process.cwd(), 'public/index.html'), 'utf-8');
+    const searchStr = 'placeholder="http://localhost:3000" value=""';
+    const replaceStr = `placeholder="http://localhost:3000" value="http://localhost:${PORT}"`;
+    const injectedHtml = html.replace(searchStr, replaceStr);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(injectedHtml);
 });
+
+// Serve static files from public directory (except index.html)
+app.use(express.static(join(process.cwd(), 'public'), { index: false }));
 
 // Universal proxy handler for all DeepSeek API endpoints
 app.post('/api/v0/:service/:endpoint', async (req, res) => {
@@ -121,25 +124,7 @@ app.get('/health', (_req, res) => {
     });
 });
 
-app.get('/', (_req, res) => {
-    res.send(`
-        <html>
-            <head><title>DeepSeek Universal Proxy</title></head>
-            <body>
-                <h1>DeepSeek Universal Proxy</h1>
-                <p>Handles CORS for all DeepSeek API endpoints</p>
-                <ul>
-                    <li><code>POST /api/v0/chat/:endpoint</code> - Chat endpoints</li>
-                    <li><code>POST /api/v0/chat_session/:endpoint</code> - Session endpoints</li>
-                    <li><code>GET</code> <a href='/health'><code>/health</code></a> - Health check</li>
-                </ul>
-                <p>Base URL: ${DEEPSEEK_BASE_URL}</p>
-            </body>
-        </html>
-    `);
-});
-
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`=====================================`);
     console.log(`DeepSeek Universal Proxy Running`);
     console.log(`URL: http://localhost:${PORT}`);
@@ -153,4 +138,14 @@ app.listen(PORT, () => {
     console.log(`✅ Authentication: Auto-injected from .env`);
     console.log(`🔧 Streaming: SSE responses supported`);
     console.log(`=====================================`);
+});
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`\n❌ PORT ${PORT} ALREADY IN USE!`);
+        console.error(`Kill existing process: lsof -ti:${PORT} | xargs kill -9`);
+        console.error(`Or change PORT in .env\n`);
+        process.exit(1);
+    }
+    throw err;
 });

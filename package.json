@@ -4,7 +4,7 @@
   "main": "cors-proxy.js",
   "type": "module",
   "scripts": {
-    "proxy": "node cors-proxy.js",
+    "proxy": "bun cors-proxy.js",
     "front": "superstatic public"
   },
   "keywords": [],
@@ -12,8 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "superstatic": "^10.0.0"
   }

@@ -815,14 +815,14 @@
             <div class="input-group">
                 <label for="apiUrl">API Endpoint</label>
                 <select id="apiUrl">
-                    <option value="http://localhost:3000">Custom URL (for CORS proxy)</option>
+                    <option value="">Custom URL (for CORS proxy)</option>
                     <option value="https://chat.deepseek.com/api/v0/chat/completion">Default Chat API</option>
                 </select>
-                <div class="url-display" id="currentUrl">http://localhost:3000</div>
+                <div class="url-display" id="currentUrl">Not configured</div>
                 
-                <div class="input-group" id="customUrlGroup" style="display: none; margin-top: 12px;">
+                <div class="input-group" id="customUrlGroup" style="margin-top: 12px;">
                     <label for="customUrl">Custom Endpoint URL</label>
-                    <input type="text" id="customUrl" placeholder="http://localhost:3000" value="http://localhost:3000" />
+                    <input type="text" id="customUrl" placeholder="http://localhost:3000" value="" />
                 </div>
                 
                 <p class="info-text">
@@ -1129,10 +1129,18 @@
         const debugInfo = document.getElementById('debugInfo');
 
         // Configuration
-        const SMART_PROXY_BASE = 'http://localhost:3000';
-        const CHALLENGE_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat/create_pow_challenge`;
-        const COMPLETION_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat/completion`;
-        const CREATE_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat_session/create`;
+        let SMART_PROXY_BASE = 'http://localhost:3000';
+        let CHALLENGE_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat/create_pow_challenge`;
+        let COMPLETION_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat/completion`;
+        let CREATE_ENDPOINT = `${SMART_PROXY_BASE}/api/v0/chat_session/create`;
+
+        function updateEndpoints() {
+            const base = getEndpointUrl().replace(/\/api\/v0.*$/, '');
+            SMART_PROXY_BASE = base;
+            CHALLENGE_ENDPOINT = `${base}/api/v0/chat/create_pow_challenge`;
+            COMPLETION_ENDPOINT = `${base}/api/v0/chat/completion`;
+            CREATE_ENDPOINT = `${base}/api/v0/chat_session/create`;
+        }
 
         // Application state
         let configExpanded = localStorage.getItem('configExpanded') !== 'false';
@@ -1991,6 +1999,9 @@
                 messageInput.value = ''; // Clear input
                 messageInput.style.height = 'auto'; // Reset height
 
+                // Update endpoints from UI
+                updateEndpoints();
+
                 // Initialize conversation if needed
                 if (!currentConversation.sessionId) {
                     await startNewConversation();
@@ -2078,7 +2089,7 @@
         apiUrlSelect.addEventListener('change', function() {
             if (this.value === '') {
                 customUrlGroup.style.display = 'block';
-                currentUrlDisplay.textContent = 'Waiting for custom URL...';
+                currentUrlDisplay.textContent = customUrlInput.value || 'http://localhost:3003';
             } else {
                 customUrlGroup.style.display = 'none';
                 currentUrlDisplay.textContent = this.value;
@@ -2089,8 +2100,6 @@
         customUrlInput.addEventListener('input', function() {
             if (this.value.trim()) {
                 currentUrlDisplay.textContent = this.value;
-            } else {
-                currentUrlDisplay.textContent = 'Waiting for custom URL...';
             }
         });
 
@@ -2192,9 +2201,6 @@
         window.addEventListener('DOMContentLoaded', () => {
             // Load token from URL hash if present
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            
-            // Pre-fill with proxy URL
-            customUrlInput.value = 'http://localhost:3000';
             
             // Update URL display
             currentUrlDisplay.textContent = getEndpointUrl();
