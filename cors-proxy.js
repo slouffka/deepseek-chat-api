@@ -12,6 +12,11 @@ const PORT = process.env.PORT || 3000;
 const DEEPSEEK_BASE_URL = 'https://chat.deepseek.com';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
+if (!DEEPSEEK_API_KEY) {
+  console.error('❌ DEEPSEEK_API_KEY not set in .env');
+  process.exit(1);
+}
+
 app.use(cors());
 app.use(express.json());
 
