@@ -4,8 +4,7 @@
   "main": "cors-proxy.js",
   "type": "module",
   "scripts": {
-    "proxy": "bun cors-proxy.js",
-    "front": "superstatic public"
+    "proxy": "bun cors-proxy.js"
   },
   "keywords": [],
   "author": "",
@@ -14,7 +13,6 @@
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "superstatic": "^10.0.0"
+    "express": "^5.2.1"
   }
 }
