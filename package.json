@@ -4,8 +4,10 @@
   "main": "cors-proxy.js",
   "type": "module",
   "scripts": {
-    "dev": "bun cors-proxy.js",
-    "proxy": "bun cors-proxy.js"
+    "dev": "bun --watch cors-proxy.js",
+    "start": "bun cors-proxy.js",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
   },
   "keywords": [],
   "author": "",
@@ -13,7 +15,11 @@
   "description": "",
   "dependencies": {
     "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1"
-  }
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "trustedDependencies": ["@types/bun"]
 }
