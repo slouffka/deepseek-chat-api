@@ -49,6 +49,8 @@ bun install      # Install dependencies
 - `.env` is gitignored
 - Never commit API keys
 - Use conventional commits if committing
+- **NEVER commit or push without green tests** (`bun test` must pass)
+- **No push permission** - user handles all git pushes
 
 ## Safety
 

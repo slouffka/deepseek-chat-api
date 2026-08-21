@@ -13,8 +13,9 @@ const PORT = process.env.PORT || 3000;
 
 const DEEPSEEK_BASE_URL = 'https://chat.deepseek.com';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const IS_TEST = process.env.NODE_ENV === 'test';
 
-if (!DEEPSEEK_API_KEY) {
+if (!DEEPSEEK_API_KEY && !IS_TEST) {
   console.error('❌ DEEPSEEK_API_KEY not set in .env');
   process.exit(1);
 }
@@ -382,6 +383,18 @@ app.post('/api/v0/tools/execute', async (req, res) => {
 
 // Chat completion with tool loop
 async function handleChatCompletionWithTools(req, res) {
+    // Test mode: return mock response without calling DeepSeek
+    if (IS_TEST) {
+        const mockResponse = {
+            choices: [{
+                message: {
+                    content: "Test response from mock"
+                }
+            }]
+        };
+        return res.json(mockResponse);
+    }
+    
     try {
         let messages = req.body.messages || [];
         const maxTurns = 10;
