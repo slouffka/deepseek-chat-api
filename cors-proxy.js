@@ -8,17 +8,12 @@ import { promises as fs } from "fs";
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
 const DEEPSEEK_BASE_URL = 'https://chat.deepseek.com';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const IS_TEST = process.env.NODE_ENV === 'test';
+const PORT = process.env.PORT || 3000;
 
-if (!DEEPSEEK_API_KEY && !IS_TEST) {
-  console.error('❌ DEEPSEEK_API_KEY not set in .env');
-  process.exit(1);
-}
+// Create single app instance
+const app = express();
 
 app.use(cors());
 app.use(express.json());
@@ -352,19 +347,6 @@ function buildPrompt(messages) {
   return `${systemPrompt}\n\n${conversation}\n\nassistant:`;
 }
 
-// Serve index.html with PORT injected (before static middleware)
-app.get('/', (_req, res) => {
-    const html = readFileSync(join(process.cwd(), 'public/index.html'), 'utf-8');
-    const searchStr = 'placeholder="http://localhost:3000" value=""';
-    const replaceStr = `placeholder="http://localhost:3000" value="http://localhost:${PORT}"`;
-    const injectedHtml = html.replace(searchStr, replaceStr);
-    res.setHeader('Content-Type', 'text/html');
-    res.send(injectedHtml);
-});
-
-// Serve static files from public directory (except index.html)
-app.use(express.static(join(process.cwd(), 'public'), { index: false }));
-
 // Tool execution endpoint
 app.post('/api/v0/tools/execute', async (req, res) => {
     try {
@@ -383,18 +365,6 @@ app.post('/api/v0/tools/execute', async (req, res) => {
 
 // Chat completion with tool loop
 async function handleChatCompletionWithTools(req, res) {
-    // Test mode: return mock response without calling DeepSeek
-    if (IS_TEST) {
-        const mockResponse = {
-            choices: [{
-                message: {
-                    content: "Test response from mock"
-                }
-            }]
-        };
-        return res.json(mockResponse);
-    }
-    
     try {
         let messages = req.body.messages || [];
         const maxTurns = 10;
@@ -577,6 +547,17 @@ app.post('/api/v0/:service/:endpoint', async (req, res) => {
     try {
         const { service, endpoint } = req.params;
         
+        // Test mode: mock handler for chat/completion
+        if (service === 'chat' && endpoint === 'completion' && process.env.NODE_ENV === 'test') {
+            return res.json({
+                choices: [{
+                    message: {
+                        content: "Test response from mock"
+                    }
+                }]
+            });
+        }
+        
         if (service === 'chat' && endpoint === 'completion') {
             return handleChatCompletionWithTools(req, res);
         }
@@ -673,28 +654,45 @@ app.get('/health', (_req, res) => {
     });
 });
 
-const server = app.listen(PORT, () => {
-    console.log(`=====================================`);
-    console.log(`DeepSeek Universal Proxy Running`);
-    console.log(`URL: http://localhost:${PORT}`);
-    console.log(`Base: ${DEEPSEEK_BASE_URL}`);
-    console.log(``);
-    console.log(`📡 Supported Endpoints:`);
-    console.log(`  POST /api/v0/chat/create_pow_challenge`);
-    console.log(`  POST /api/v0/chat/completion`);
-    console.log(`  POST /api/v0/chat_session/create`);
-    console.log(``);
-    console.log(`✅ Authentication: Auto-injected from .env`);
-    console.log(`🔧 Streaming: SSE responses supported`);
-    console.log(`=====================================`);
+// Serve index.html with PORT injected (before static middleware)
+app.get('/', (_req, res) => {
+    const html = readFileSync(join(process.cwd(), 'public/index.html'), 'utf-8');
+    const searchStr = 'placeholder="http://localhost:3000" value=""';
+    const replaceStr = `placeholder="http://localhost:3000" value="http://localhost:${PORT}"`;
+    const injectedHtml = html.replace(searchStr, replaceStr);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(injectedHtml);
 });
 
-server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`\n❌ PORT ${PORT} ALREADY IN USE!`);
-        console.error(`Kill existing process: lsof -ti:${PORT} | xargs kill -9`);
-        console.error(`Or change PORT in .env\n`);
-        process.exit(1);
-    }
-    throw err;
-});
+// Serve static files from public directory (except index.html)
+app.use(express.static(join(process.cwd(), 'public'), { index: false }));
+
+// Export for testing
+export { app, handleChatCompletionWithTools, executeTool, getPowHeader, buildPrompt, parseSSEContent, extractToolCall };
+
+// Start server when run directly
+if (import.meta.main) {
+    app.listen(PORT, () => {
+        console.log(`=====================================`);
+        console.log(`DeepSeek Universal Proxy Running`);
+        console.log(`URL: http://localhost:${PORT}`);
+        console.log(`Base: ${DEEPSEEK_BASE_URL}`);
+        console.log(``);
+        console.log(`📡 Supported Endpoints:`);
+        console.log(`  POST /api/v0/chat/create_pow_challenge`);
+        console.log(`  POST /api/v0/chat/completion`);
+        console.log(`  POST /api/v0/chat_session/create`);
+        console.log(``);
+        console.log(`✅ Authentication: Auto-injected from .env`);
+        console.log(`🔧 Streaming: SSE responses supported`);
+        console.log(`=====================================`);
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`\n❌ PORT ${PORT} ALREADY IN USE!`);
+            console.error(`Kill existing process: lsof -ti:${PORT} | xargs kill -9`);
+            console.error(`Or change PORT in .env\n`);
+            process.exit(1);
+        }
+        throw err;
+    });
+}

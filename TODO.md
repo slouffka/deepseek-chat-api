@@ -1,5 +1,6 @@
 ## DeepSeek Proxy TODO
 
+- [ ] Implement zsh/rg fallbacks to common utils.
 - [x] Implement port loading from .env
 - [x] Fix non-editable proxy url input
 - [x] Fix chat messages and streaming.

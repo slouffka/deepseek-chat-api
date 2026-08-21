@@ -1,39 +1,37 @@
-import { describe, it, expect, beforeAll, afterAll, mock, test } from "bun:test";
+import { describe, it, expect, beforeAll, afterAll, mock } from "bun:test";
 
 const TEST_PORT = 3001;
 const PROXY_URL = `http://localhost:${TEST_PORT}`;
 let serverProcess: Bun.Subprocess | null = null;
 
-// Global setup - runs once before all tests
-beforeAll(async () => {
-  // Start proxy server for integration tests
-  serverProcess = Bun.spawn(["bun", "cors-proxy.js"], {
-    cwd: process.cwd(),
-    stdout: "inherit",
-    stderr: "inherit",
-    env: { ...process.env, NODE_ENV: "test", PORT: String(TEST_PORT) },
+describe("Proxy Server", () => {
+  beforeAll(async () => {
+    // Start proxy server for integration tests
+    serverProcess = Bun.spawn(["bun", "cors-proxy.js"], {
+      cwd: process.cwd(),
+      stdout: "inherit",
+      stderr: "inherit",
+      env: { ...process.env, NODE_ENV: "test", PORT: String(TEST_PORT) },
+    });
+
+    // Wait for server to be ready - poll health endpoint
+    const maxRetries = 30;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(`${PROXY_URL}/health`);
+        if (response.ok) break;
+      } catch {}
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }, 10000);
+
+  afterAll(async () => {
+    if (serverProcess) {
+      serverProcess.kill();
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   });
 
-  // Wait for server to be ready - poll health endpoint
-  const maxRetries = 30;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const response = await fetch(`${PROXY_URL}/health`);
-      if (response.ok) break;
-    } catch {}
-    await new Promise(resolve => setTimeout(resolve, 200));
-  }
-});
-
-// Global teardown - runs once after all tests
-afterAll(async () => {
-  if (serverProcess) {
-    serverProcess.kill();
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-});
-
-describe("Proxy Server", () => {
   it("serves index.html on root", async () => {
     const response = await fetch(`${PROXY_URL}/`);
     expect(response.status).toBe(200);
@@ -60,9 +58,7 @@ describe("Proxy Server", () => {
     });
     expect(response.status).toBe(204);
   });
-});
 
-describe("Chat Completion Endpoint (mocked)", () => {
   it("returns mock response without real API", async () => {
     const response = await fetch(`${PROXY_URL}/api/v0/chat/completion`, {
       method: "POST",

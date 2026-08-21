@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, mock } from "bun:test";
+import { readdir } from "fs/promises";
 import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
 import { join } from "path";
 
@@ -45,10 +46,7 @@ describe("File System Tools", () => {
   });
 
   it("lists directory contents", async () => {
-    const entries = [];
-    for await (const entry of new Bun.Glob("*").scan({ cwd: TEST_DIR })) {
-      entries.push(entry);
-    }
+    const entries = await readdir(TEST_DIR);
     expect(entries.length).toBeGreaterThanOrEqual(3);
     expect(entries).toContain("test.txt");
   });
