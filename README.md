@@ -2,6 +2,8 @@
 
 Research-only reverse-engineered client for DeepSeek Chat API with full tool support.
 
+![Demo screenshot](assets/img/demo.png)
+
 ## Features
 
 - Proof-of-Work (SHA3 WASM) solved on proxy
