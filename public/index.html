@@ -59,11 +59,12 @@
             line-height: 1.4;
             background: var(--background);
             padding: var(--spacing);
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             max-width: 48rem;
             margin: 0 auto;
+            overflow: hidden;
             transition: background-color 0.3s, color 0.3s;
         }
 
@@ -71,6 +72,7 @@
             display: flex;
             flex-direction: column;
             flex: 1;
+            min-height: 0;
             gap: var(--spacing);
         }
 
@@ -289,10 +291,10 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 400px;
-            padding: 0; /* Remove default padding for full-width look */
+            min-height: 0;
+            padding: 0;
             background: var(--surface);
-            overflow: hidden; /* Contain children */
+            overflow: hidden;
             border-bottom-left-radius: 2px;
             border-bottom-right-radius: 2px;
         }
@@ -307,12 +309,42 @@
 
         .chat-history {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
             padding: var(--spacing);
             display: flex;
             flex-direction: column;
             gap: 1rem;
             background: rgba(125, 125, 125, 0.05);
+            /* Custom scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+        
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-history::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 4px 0;  /* Minimal padding from border */
+            border-radius: 3px;
+        }
+        
+        .chat-history::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        
+        .chat-history::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+            background-clip: padding-box;
+        }
+        
+        .chat-history::-webkit-scrollbar-corner {
+            background: transparent;
         }
 
         .chat-message {
@@ -357,6 +389,23 @@
             border: 1px solid var(--border);
             border-bottom-left-radius: 2px;
             font-family: var(--font-ui);
+        }
+
+        .chat-message.tool {
+            background-color: var(--background);
+            color: var(--text-secondary);
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            padding: 0.75rem;
+            max-width: 100%;
+        }
+
+        .chat-message.tool pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         /* Markdown Styles */
@@ -499,6 +548,7 @@
             border-top-left-radius: 2px;
             border-top-right-radius: 2px;
             margin-top: 0;
+            flex-shrink: 0;
         }
 
         .input-area {
@@ -853,20 +903,13 @@
 
         <div class="card input-card">
              <div class="input-group input-wrapper">
-                <textarea id="message" placeholder="Type your message here... (Ctrl+Enter to send)"></textarea>
+                <textarea id="message" placeholder="Type your message here... (Enter to send, Shift+Enter for new line)"></textarea>
                 <button id="sendBtn" class="send-icon-btn" title="Send Request">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>
                 </button>
-            </div>
-            
-            <div class="pow-status" id="powStatus">
-                <div id="powMessage">Ready to solve Proof-of-Work...</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="powProgress"></div>
-                </div>
             </div>
             
             <div class="debug-toggle">
@@ -907,211 +950,75 @@
             if (typeof hljs !== 'undefined' && element) {
                 element.querySelectorAll('pre code').forEach(block => {
                     hljs.highlightElement(block);
+                    addCopyButton(block);
                 });
             }
         }
 
-        class DeepSeekHash {
-            constructor() {
-                this.instance = null;
-                this.memory = null;
-                this.exports = null;
-                this.isReady = false;
-            }
-
-            async init(wasmPath) {
+        function addCopyButton(codeBlock) {
+            const pre = codeBlock.parentElement;
+            if (!pre || pre.classList.contains('copy-enabled')) return;
+            
+            pre.classList.add('copy-enabled');
+            pre.style.position = 'relative';
+            
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-code-btn';
+            copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+            copyBtn.title = 'Copy code';
+            copyBtn.style.cssText = `
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                padding: 6px;
+                background: var(--code-bg);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                cursor: pointer;
+                opacity: 0;
+                transition: opacity 0.2s, background 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-secondary);
+                z-index: 10;
+            `;
+            
+            pre.style.paddingRight = '40px';
+            
+            pre.addEventListener('mouseenter', () => copyBtn.style.opacity = '1');
+            pre.addEventListener('mouseleave', () => copyBtn.style.opacity = '0');
+            
+            copyBtn.addEventListener('click', async () => {
+                const code = codeBlock.textContent;
                 try {
-                    updatePowStatus('Loading WASM module...', 'info', 0);
-                    
-                    const response = await fetch(wasmPath);
-                    const bytes = await response.arrayBuffer();
-                    
-                    // Simple import object - the WASM seems self-contained
-                    const importObject = {
-                        env: {
-                            memory: new WebAssembly.Memory({ initial: 256 }),
-                        }
-                    };
-
-                    const { instance } = await WebAssembly.instantiate(bytes, importObject);
-                    
-                    this.instance = instance;
-                    this.exports = instance.exports;
-                    this.memory = this.exports.memory;
-                    this.isReady = true;
-                    
-                    console.log('WASM loaded successfully');
-                    console.log('Exports:', Object.keys(this.exports));
-                    
-                    updatePowStatus('WASM module ready', 'success', 100);
-                    return this;
-                    
-                } catch (error) {
-                    console.error('Failed to load WASM:', error);
-                    updatePowStatus(`WASM load failed: ${error.message}`, 'error', 0);
-                    throw error;
+                    await navigator.clipboard.writeText(code);
+                    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                    copyBtn.style.color = 'var(--success)';
+                    copyBtn.title = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                        copyBtn.style.color = 'var(--text-secondary)';
+                        copyBtn.title = 'Copy code';
+                    }, 2000);
+                } catch (e) {
+                    copyBtn.style.color = 'var(--error)';
+                    copyBtn.title = 'Failed to copy';
+                    setTimeout(() => {
+                        copyBtn.style.color = 'var(--text-secondary)';
+                        copyBtn.title = 'Copy code';
+                    }, 2000);
                 }
-            }
-
-            // Write string to WASM memory and return pointer and length
-            _writeToMemory(text) {
-                if (!this.isReady) throw new Error('WASM not initialized');
-                
-                const encoder = new TextEncoder();
-                const encoded = encoder.encode(text);
-                const length = encoded.length;
-                
-                // Use __wbindgen_export_0 for allocation (like in Python)
-                const ptr = this.exports.__wbindgen_export_0(length, 1);
-                
-                // Get memory view and write the string
-                const memoryView = new Uint8Array(this.memory.buffer);
-                memoryView.set(encoded, ptr);
-                
-                return [ptr, length];
-            }
-
-            // Calculate hash using the same method as Python
-            calculateHash(algorithm, challenge, salt, difficulty, expireAt) {
-                if (!this.isReady) throw new Error('WASM not initialized');
-                
-                console.log('Calculating hash with params:');
-                console.log('Algorithm:', algorithm);
-                console.log('Challenge:', challenge);
-                console.log('Salt:', salt);
-                console.log('Difficulty:', difficulty);
-                console.log('ExpireAt:', expireAt);
-                
-                // Build prefix string exactly as in Python: f"{salt}_{expire_at}_"
-                const prefix = `${salt}_${expireAt}_`;
-                
-                // Allocate space for return value (16 bytes)
-                const retptr = this.exports.__wbindgen_add_to_stack_pointer(-16);
-                
-                try {
-                    // Write challenge and prefix to memory
-                    const [challengePtr, challengeLen] = this._writeToMemory(challenge);
-                    const [prefixPtr, prefixLen] = this._writeToMemory(prefix);
-                    
-                    console.log('Calling wasm_solve with:');
-                    console.log('  retptr:', retptr);
-                    console.log('  challengePtr:', challengePtr);
-                    console.log('  challengeLen:', challengeLen);
-                    console.log('  prefixPtr:', prefixPtr);
-                    console.log('  prefixLen:', prefixLen);
-                    console.log('  difficulty:', difficulty);
-                    
-                    // Call wasm_solve exactly as in Python
-                    this.exports.wasm_solve(
-                        retptr,
-                        challengePtr,
-                        challengeLen,
-                        prefixPtr,
-                        prefixLen,
-                        parseFloat(difficulty)
-                    );
-                    
-                    // Read result from memory
-                    const memoryView = new Uint8Array(this.memory.buffer);
-                    
-                    // Read status (4 bytes, little endian)
-                    const statusBytes = memoryView.slice(retptr, retptr + 4);
-                    const status = new Int32Array(statusBytes.buffer)[0];
-                    
-                    console.log('Status:', status);
-                    
-                    if (status === 0) {
-                        return null;
-                    }
-                    
-                    // Read answer (8 bytes, float64, little endian)
-                    const answerBytes = memoryView.slice(retptr + 8, retptr + 16);
-                    const answerValue = new Float64Array(answerBytes.buffer)[0];
-                    const answer = Math.floor(answerValue);
-                    
-                    console.log('Answer value:', answerValue);
-                    console.log('Answer (int):', answer);
-                    
-                    return answer;
-                    
-                } finally {
-                    // Clean up stack pointer
-                    this.exports.__wbindgen_add_to_stack_pointer(16);
-                }
-            }
+            });
+            
+            pre.appendChild(copyBtn);
         }
 
-        class DeepSeekPOW {
-            constructor() {
-                this.hasher = new DeepSeekHash();
-            }
-
-            async initialize(wasmPath) {
-                try {
-                    await this.hasher.init(wasmPath);
-                    console.log('DeepSeekPOW initialized');
-                    return true;
-                } catch (error) {
-                    console.error('Failed to initialize DeepSeekPOW:', error);
-                    return false;
-                }
-            }
-
-            // Solve challenge and return base64-encoded response
-            async solveChallenge(config) {
-                if (!this.hasher.isReady) {
-                    throw new Error('WASM module not loaded');
-                }
-
-                console.log('Solving challenge with config:', config);
-                
-                // Calculate answer using the same method as Python
-                const answer = this.hasher.calculateHash(
-                    config.algorithm,
-                    config.challenge,
-                    config.salt,
-                    config.difficulty,
-                    config.expire_at
-                );
-                
-                console.log('Calculated answer:', answer);
-                
-                if (answer === null || answer === undefined) {
-                    throw new Error('Failed to solve PoW challenge');
-                }
-                
-                // Build result object exactly as in Python
-                const result = {
-                    'algorithm': config.algorithm,
-                    'challenge': config.challenge,
-                    'salt': config.salt,
-                    'answer': answer,
-                    'signature': config.signature,
-                    'target_path': config.target_path
-                };
-                
-                console.log('Result object:', result);
-                
-                // Encode to base64 as in Python
-                const jsonStr = JSON.stringify(result);
-                const encoded = btoa(jsonStr);
-                
-                console.log('Base64 encoded result:', encoded);
-                
-                return {
-                    powHeader: encoded,
-                    answer: answer,
-                    iterations: 1, // WASM solves in one call
-                    time: 0 // We don't track time in this simple approach
-                };
-            }
-        }
-
-        // ==============================
+// ==============================
         // MAIN APPLICATION CODE
         // ==============================
 
-        // DOM Elements (already defined in your HTML)
+        // DOM Elements
         const configToggle = document.getElementById('configToggle');
         const configCard = document.getElementById('configCard');
         const apiUrlSelect = document.getElementById('apiUrl');
@@ -1122,9 +1029,6 @@
         const sendBtn = document.getElementById('sendBtn');
         const clearBtn = document.getElementById('clearBtn');
         const chatHistory = document.getElementById('chatHistory');
-        const powStatus = document.getElementById('powStatus');
-        const powMessage = document.getElementById('powMessage');
-        const powProgress = document.getElementById('powProgress');
         const debugToggle = document.getElementById('debugToggle');
         const debugInfo = document.getElementById('debugInfo');
 
@@ -1146,10 +1050,24 @@
         let configExpanded = localStorage.getItem('configExpanded') !== 'false';
         let debugEnabled = false;
         let currentController = null; // For aborting requests
+        
+        // Load conversation state from localStorage
         let currentConversation = {
             sessionId: null,
             lastResponseId: null
         };
+        try {
+            const savedConversation = localStorage.getItem('deepseek_conversation');
+            if (savedConversation) {
+                currentConversation = JSON.parse(savedConversation);
+            }
+        } catch (e) {
+            console.error('Failed to load conversation state', e);
+        }
+        
+        function saveConversation() {
+            localStorage.setItem('deepseek_conversation', JSON.stringify(currentConversation));
+        }
         
         // Theme Management
         const themeToggle = document.getElementById('themeToggle');
@@ -1211,13 +1129,27 @@
 
             messages.forEach(msg => {
                 const wrapper = document.createElement('div');
-                wrapper.className = `chat-message ${msg.role}`;
+                
+                // Style tool messages differently
+                if (msg.role === 'tool') {
+                    wrapper.className = 'chat-message tool';
+                } else {
+                    wrapper.className = `chat-message ${msg.role}`;
+                }
                 
                 // Content
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
                 
-                if (msg.role === 'assistant' && msg.isHtml) {
+                if (msg.role === 'tool') {
+                    // Render tool result as formatted JSON
+                    try {
+                        const parsed = JSON.parse(msg.content);
+                        contentDiv.innerHTML = `<pre style="margin:0; font-size:12px;">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+                    } catch {
+                        contentDiv.innerHTML = `<pre style="margin:0; font-size:12px;">${escapeHtml(msg.content)}</pre>`;
+                    }
+                } else if (msg.role === 'assistant' && msg.isHtml) {
                      contentDiv.innerHTML = msg.content;
                 } else {
                      // Render user messages as Markdown
@@ -1404,38 +1336,12 @@
             return `${datePart}-${randomPart}`;
         }
 
-        // Show status message (reuses PoW status area)
+        // Show status message (uses debug area)
         function showStatus(message, type = 'info') {
-            // Map generic status to PoW status format
-            let progress = 0;
-            if (type === 'success') progress = 100;
+            addDebugLog(`Status: ${message}`, { type });
             
-            updatePowStatus(message, type, progress);
-            
-            // Auto-hide after delay for non-mining events
-            if (type !== 'mining') {
-                setTimeout(() => {
-                    // Only hide if the message hasn't changed (simple check)
-                    if (powMessage.textContent === message) {
-                        powStatus.classList.remove('active');
-                    }
-                }, 3000);
-            }
-        }
-
-        // Update PoW status display
-        function updatePowStatus(message, type = 'info', progress = 0) {
-            powStatus.className = 'pow-status active ' + type;
-            powMessage.textContent = message;
-            powProgress.className = 'progress-fill';
-            powProgress.style.width = progress + '%';
-            
-            // Handle mining animation
-            if (type === 'mining') {
-                powProgress.classList.add('mining');
-            } else {
-                powProgress.classList.remove('mining');
-            }
+            // Could add a toast/notification here if needed
+            console.log(`[Status] ${type}: ${message}`);
         }
 
         // Add debug log
@@ -1752,95 +1658,6 @@
         // API FUNCTIONS
         // ==============================
 
-        // Request PoW challenge
-        async function requestPowChallenge() {
-            updatePowStatus('Requesting PoW challenge...', 'info', 0);
-            addDebugLog('Requesting PoW challenge');
-            
-            try {
-                const response = await fetch(CHALLENGE_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-client-version': '1.5.0',
-                        'x-app-version': '20241129.1',
-                        'x-client-platform': 'web',
-                        'x-client-locale': 'en_US',
-                        'x-debug-model-channel': 'prod',
-                        'x-debug-lite-model-channel': 'prod',
-                        'Referer': 'https://chat.deepseek.com/',
-                        'Origin': 'https://chat.deepseek.com'
-                    },
-                    body: JSON.stringify({
-                        target_path: '/api/v0/chat/completion'
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Challenge request failed: ${response.status}`);
-                }
-
-                const result = await response.json();
-                addDebugLog('Received PoW challenge', result);
-                
-                const challengeData = result.data?.biz_data?.challenge;
-                if (!challengeData) {
-                    throw new Error('Invalid challenge response structure');
-                }
-                
-                if (challengeData.expire_at < Date.now()) {
-                    throw new Error('Challenge expired');
-                }
-                
-                return challengeData;
-            } catch (error) {
-                updatePowStatus(`Error: ${error.message}`, 'error', 0);
-                throw error;
-            }
-        }
-
-        // Initialize the solver
-        const powSolver = new DeepSeekPOW();
-
-        // Update the solvePowWithWasm function
-        async function solvePowWithWasm(challengeData) {
-            try {
-                updatePowStatus('Initializing PoW solver...', 'info', 0);
-                
-                // Ensure WASM is loaded
-                if (!powSolver.hasher.isReady) {
-                    const initialized = await powSolver.initialize('sha3_wasm_bg.7b9ca65ddd.wasm');
-                    if (!initialized) {
-                        throw new Error('Failed to initialize WASM solver');
-                    }
-                }
-                
-                updatePowStatus('Solving PoW challenge...', 'mining', 50);
-                
-                // Solve the challenge
-                const result = await powSolver.solveChallenge(challengeData);
-                
-                updatePowStatus(
-                    `Solved! Answer: ${result.answer}`,
-                    'success',
-                    100
-                );
-                
-                addDebugLog('PoW solved', result);
-                
-                return {
-                    powHeader: result.powHeader,
-                    iterations: result.iterations,
-                    time: result.time
-                };
-                
-            } catch (error) {
-                updatePowStatus(`PoW solving error: ${error.message}`, 'error', 0);
-                console.error('PoW solving error details:', error);
-                throw error;
-            }
-        }
-
         // Create chat session
         async function createChatSession() {
             const response = await fetch(CREATE_ENDPOINT, {
@@ -1881,6 +1698,7 @@
                     sessionId: newSessionId,
                     lastResponseId: null
                 };
+                saveConversation();
                 console.log('Started new conversation:', currentConversation);
                 return newSessionId;
             } catch (error) {
@@ -1898,13 +1716,14 @@
         function updateConversationWithResponse(responseMessageId) {
             if (responseMessageId && responseMessageId > 0) {
                 currentConversation.lastResponseId = responseMessageId;
+                saveConversation();
                 console.log('Updated last response ID to:', responseMessageId);
             }
         }
 
-        // Send chat completion request
-        async function sendChatCompletion(message, powHeader) {
-            updatePowStatus('Sending chat request...', 'info', 100);
+        // Send chat completion request (proxy handles PoW) with rate limit retry
+        async function sendChatCompletion(message) {
+            showStatus('Sending request...', 'info');
             addDebugLog('Sending chat completion request');
             
             const requestPayload = {
@@ -1914,7 +1733,12 @@
                 ref_file_ids: [],
                 thinking_enabled: true,
                 search_enabled: true,
-                client_stream_id: generateClientStreamId()
+                client_stream_id: generateClientStreamId(),
+                // Include full message history for tool support
+                messages: messages.map(m => ({
+                    role: m.role,
+                    content: m.content
+                }))
             };
             
             addDebugLog('Request payload', requestPayload);
@@ -1923,43 +1747,76 @@
             currentController = new AbortController();
             const signal = currentController.signal;
             
-            const response = await fetch(COMPLETION_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-ds-pow-response': powHeader,
-                    'x-client-version': '1.5.0',
-                    'x-app-version': '20241129.1',
-                    'x-client-platform': 'web',
-                    'x-client-locale': 'en_US',
-                    'x-debug-model-channel': 'prod',
-                    'x-debug-lite-model-channel': 'prod',
-                    'Referer': 'https://chat.deepseek.com/',
-                    'Origin': 'https://chat.deepseek.com'
-                },
-                body: JSON.stringify(requestPayload),
-                signal: signal
-            });
+            const maxRetries = 5;
+            let attempt = 0;
             
-            addDebugLog('Response status', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                addDebugLog('Error response', errorText);
-                throw new Error(`API error ${response.status}: ${errorText}`);
-            }
+            while (attempt < maxRetries) {
+                attempt++;
+                
+                const response = await fetch(COMPLETION_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-client-version': '1.5.0',
+                        'x-app-version': '20241129.1',
+                        'x-client-platform': 'web',
+                        'x-client-locale': 'en_US',
+                        'x-debug-model-channel': 'prod',
+                        'x-debug-lite-model-channel': 'prod',
+                        'Referer': 'https://chat.deepseek.com/',
+                        'Origin': 'https://chat.deepseek.com'
+                    },
+                    body: JSON.stringify(requestPayload),
+                    signal: signal
+                });
+                
+                addDebugLog('Response status', response.status);
+                
+                if (response.status === 429) {
+                    // Rate limited - parse wait time and retry
+                    let waitSeconds = 10;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.message) {
+                            const match = errorData.message.match(/Wait (\d+)s/);
+                            if (match) waitSeconds = parseInt(match[1]);
+                        }
+                    } catch {}
+                    
+                    addDebugLog(`Rate limited, waiting ${waitSeconds}s (attempt ${attempt}/${maxRetries})`);
+                    
+                    // Show animated countdown
+                    for (let i = waitSeconds; i > 0; i--) {
+                        if (signal.aborted) throw new Error('Request stopped');
+                        showStatus(`Rate limited. Retrying in ${i}s...`, 'warning');
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                    
+                    // Generate new stream ID for retry
+                    requestPayload.client_stream_id = generateClientStreamId();
+                    continue;
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addDebugLog('Error response', errorText);
+                    throw new Error(`API error ${response.status}: ${errorText}`);
+                }
 
-            // Handle streaming response
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('text/event-stream')) {
-                const { responseMessageId, fullResponse } = await parseStreamResponse(response);
-                updateConversationWithResponse(responseMessageId);
-                return fullResponse;
-            } else {
-                const data = await response.json();
-                addDebugLog('Non streaming response:', data);
-                return data;
+                // Handle streaming response
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/event-stream')) {
+                    const { responseMessageId, fullResponse } = await parseStreamResponse(response);
+                    updateConversationWithResponse(responseMessageId);
+                    return fullResponse;
+                } else {
+                    const data = await response.json();
+                    addDebugLog('Non streaming response:', data);
+                    return data;
+                }
             }
+            
+            throw new Error('Max retries exceeded for rate limit');
         }
 
         async function sendRequest() {
@@ -2008,14 +1865,8 @@
                     showStatus('New chat session started', 'info');
                 }
 
-                // Step 1: Request PoW challenge
-                const challengeData = await requestPowChallenge();
-                
-                // Step 2: Solve PoW with WASM
-                const { powHeader, iterations, time } = await solvePowWithWasm(challengeData);
-                
-                // Step 3: Send chat completion
-                const result = await sendChatCompletion(message, powHeader);
+                // Send chat completion (proxy handles PoW)
+                const result = await sendChatCompletion(message);
                 
                 // Step 4: Display result
                 if (typeof result === 'string') {
@@ -2023,8 +1874,7 @@
                     showStatus('Message received', 'success');
                 } else if (result.choices && result.choices.length > 0) {
                     const reply = result.choices[0].message.content;
-                    updateLastAssistantMessage(reply, result.usage, false); // Assuming plain text fallback
-                    
+                    updateLastAssistantMessage(reply, result.usage, false);
                     showStatus(`Success!`, 'success');
                 } else if (result.message || result.content) {
                     appendMessage('assistant', result.message || result.content);
@@ -2157,12 +2007,6 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                sendRequest();
-            }
-            if (e.key === 'Escape') {
-                // Optional: stop generating?
-            }
             if (e.ctrlKey && e.shiftKey && e.key === 'C') {
                 configToggle.click();
                 e.preventDefault();
@@ -2170,6 +2014,14 @@
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 debugToggle.click();
                 e.preventDefault();
+            }
+        });
+
+        // Chat input: Enter to send, Shift+Enter for new line
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendRequest();
             }
         });
 
@@ -2211,22 +2063,6 @@
             
             // Render chat history
             renderMessages();
-            
-            // Pre-load WASM module
-            setTimeout(() => {
-                console.log('Pre-loading WASM module...');
-                powSolver.initialize('sha3_wasm_bg.7b9ca65ddd.wasm')
-                    .then(initialized => {
-                        if (initialized) {
-                            console.log('WASM PoW solver ready');
-                        } else {
-                            console.warn('WASM solver failed to load');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('WASM pre-load error:', error);
-                    });
-            }, 500);
         });
     </script>
 </body>

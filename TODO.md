@@ -2,7 +2,6 @@
 
 - [x] Implement port loading from .env
 - [x] Fix non-editable proxy url input
-- [ ] Implement automatic api key extraction via web login
 - [x] Fix chat messages and streaming.
 - [x] Fix thinking toggle.
 - [ ] Extract styles and js and split into multiple modules. The index.html is
@@ -11,6 +10,7 @@ too big already.
 - [x] Implement beautiful and clean clear chat alert instead of default.
 - [x] Use full chat container width for messages. Only let them stay short if
 they actually short.
+- [ ] Implement automatic api key extraction via web login
 
 - [ ] Fix chat message formatting broken after page reload.
 
