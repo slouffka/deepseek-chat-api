@@ -4,11 +4,12 @@
   "main": "cors-proxy.js",
   "type": "module",
   "scripts": {
+    "dev": "bun cors-proxy.js",
     "proxy": "bun cors-proxy.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "cors": "^2.8.6",
